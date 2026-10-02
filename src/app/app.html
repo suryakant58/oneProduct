@@ -1,49 +1,472 @@
-@if (isQuickViewOpen()) {<div class="quick-view-backdrop" (click)="closeQuickView()"><section class="quick-view-modal" role="dialog" aria-modal="true" aria-label="Quick product view" (click)="$event.stopPropagation()"><button class="quick-view-close" (click)="closeQuickView()" aria-label="Close quick view">×</button><p class="eyebrow"><span></span> Quick view</p><h2>Fresh from the <em>coconut.</em></h2><div class="quick-view-stage"><img [src]="quickViewImages()[quickViewIndex()]" [alt]="'Coconut juice quick view ' + (quickViewIndex() + 1)"><button class="quick-view-prev" (click)="moveQuickView(-1)" aria-label="Previous quick view image">&lt;</button><button class="quick-view-next" (click)="moveQuickView(1)" aria-label="Next quick view image">&gt;</button></div><div class="quick-view-thumbs">@for (image of quickViewImages; track $index) {<button [class.active]="quickViewIndex() === $index" (click)="quickViewIndex.set($index)" [attr.aria-label]="'Show quick view image ' + ($index + 1)"><img [src]="image" alt=""></button>}</div><p class="quick-view-count">{{quickViewIndex() + 1}} / {{quickViewImages.length}} coconut juice images</p></section></div>}
+@if (isQuickViewOpen()) {<div class="quick-view-backdrop" (click)="closeQuickView()">
+  <section class="quick-view-modal" role="dialog" aria-modal="true" aria-label="Quick product view"
+    (click)="$event.stopPropagation()"><button class="quick-view-close" (click)="closeQuickView()"
+      aria-label="Close quick view">×</button>
+    <p class="eyebrow"><span></span> Quick view</p>
+    <h2>Fresh from the <em>coconut.</em></h2>
+    <div class="quick-view-stage"><img [src]="quickViewImages()[quickViewIndex()]"
+        [alt]="'Coconut juice quick view ' + (quickViewIndex() + 1)"><button class="quick-view-prev"
+        (click)="moveQuickView(-1)" aria-label="Previous quick view image">&lt;</button><button class="quick-view-next"
+        (click)="moveQuickView(1)" aria-label="Next quick view image">&gt;</button></div>
+    <div class="quick-view-thumbs">@for (image of quickViewImages(); track $index) {<button
+        [class.active]="quickViewIndex() === $index" (click)="quickViewIndex.set($index)"
+        [attr.aria-label]="'Show quick view image ' + ($index + 1)"><img [src]="image" alt=""></button>}</div>
+    <p class="quick-view-count">{{quickViewIndex() + 1}} / {{quickViewImages().length}} coconut juice images</p>
+  </section>
+</div>}
 <div class="app-shell">
   <style>
-    .app-shell { overflow: visible !important; }
-    .profile-popover { display: none; position: fixed; right: 18px; top: 124px; z-index: 25; width: 190px; padding: 16px; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow); }
-    .profile-popover.is-open { display: grid; gap: 8px; }
-    .profile-popover strong { color: var(--forest); font: 700 14px var(--display); }
-    .profile-popover small { color: var(--muted); font: 10px var(--sans); }
-    .profile-popover button { border: 0; background: transparent; padding: 7px 0; text-align: left; color: var(--ink-soft); font: 11px var(--sans); cursor: pointer; }
-    .profile-popover button:hover { color: var(--coral); }
-    .profile-popover button span { float: right; color: var(--coral); }
-    .profile-popover .sign-out { border-top: 1px solid var(--line); padding-top: 12px; }
-    .modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: #18392d99; }
-    .order-modal { position: relative; width: min(620px, 100%); max-height: 92vh; overflow: auto; padding: 34px; background: var(--paper); box-shadow: 0 25px 80px #0004; }
-    .order-modal h2 { margin: 10px 0; font-size: 48px; }
-    .modal-intro { color: var(--ink-soft); font: 13px/1.5 var(--sans); margin-bottom: 22px; }
-    .modal-close { position: absolute; right: 15px; top: 12px; border: 0; background: transparent; color: var(--ink); font-size: 25px; cursor: pointer; }
-    .order-form { display: grid; gap: 13px; }
-    .order-form label { display: grid; gap: 6px; color: var(--forest); font: 700 10px var(--sans); text-transform: uppercase; letter-spacing: .06em; }
-    .order-form input, .order-form select, .order-form textarea { width: 100%; border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 11px; outline: 0; font: 12px var(--sans); text-transform: none; letter-spacing: 0; }
-    .order-form input:focus, .order-form select:focus, .order-form textarea:focus { border-color: var(--coral); }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
-    .order-submit { justify-content: space-between; margin-top: 6px; cursor: pointer; }
-    .order-success { text-align: center; padding: 32px 10px 10px; }
-    .order-success > span { display: grid; place-items: center; width: 52px; height: 52px; margin: auto; border-radius: 50%; background: var(--lime); color: var(--forest); font-size: 25px; }
-    .order-success h2 { font-size: 43px; }
-    .order-success p { color: var(--ink-soft); font: 13px/1.6 var(--sans); margin: 0 auto 25px; max-width: 390px; }
-    @media (max-width: 680px) { .profile-popover { right: 10px; top: 74px; } .order-modal { padding: 27px 20px; } .form-row { grid-template-columns: 1fr; } }
+    .app-shell {
+      overflow: visible !important;
+    }
+
+    .profile-popover {
+      display: none;
+      position: fixed;
+      right: 18px;
+      top: 124px;
+      z-index: 25;
+      width: 190px;
+      padding: 16px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .profile-popover.is-open {
+      display: grid;
+      gap: 8px;
+    }
+
+    .profile-popover strong {
+      color: var(--forest);
+      font: 700 14px var(--display);
+    }
+
+    .profile-popover small {
+      color: var(--muted);
+      font: 10px var(--sans);
+    }
+
+    .profile-popover button {
+      border: 0;
+      background: transparent;
+      padding: 7px 0;
+      text-align: left;
+      color: var(--ink-soft);
+      font: 11px var(--sans);
+      cursor: pointer;
+    }
+
+    .profile-popover button:hover {
+      color: var(--coral);
+    }
+
+    .profile-popover button span {
+      float: right;
+      color: var(--coral);
+    }
+
+    .profile-popover .sign-out {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: #18392d99;
+    }
+
+    .order-modal {
+      position: relative;
+      width: min(620px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      padding: 34px;
+      background: var(--paper);
+      box-shadow: 0 25px 80px #0004;
+    }
+
+    .order-modal h2 {
+      margin: 10px 0;
+      font-size: 48px;
+    }
+
+    .modal-intro {
+      color: var(--ink-soft);
+      font: 13px/1.5 var(--sans);
+      margin-bottom: 22px;
+    }
+
+    .modal-close {
+      position: absolute;
+      right: 15px;
+      top: 12px;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: 25px;
+      cursor: pointer;
+    }
+
+    .order-form {
+      display: grid;
+      gap: 13px;
+    }
+
+    .order-form label {
+      display: grid;
+      gap: 6px;
+      color: var(--forest);
+      font: 700 10px var(--sans);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .order-form input,
+    .order-form select,
+    .order-form textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink);
+      padding: 11px;
+      outline: 0;
+      font: 12px var(--sans);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .order-form input:focus,
+    .order-form select:focus,
+    .order-form textarea:focus {
+      border-color: var(--coral);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 13px;
+    }
+
+    .order-submit {
+      justify-content: space-between;
+      margin-top: 6px;
+      cursor: pointer;
+    }
+
+    .order-success {
+      text-align: center;
+      padding: 32px 10px 10px;
+    }
+
+    .order-success>span {
+      display: grid;
+      place-items: center;
+      width: 52px;
+      height: 52px;
+      margin: auto;
+      border-radius: 50%;
+      background: var(--lime);
+      color: var(--forest);
+      font-size: 25px;
+    }
+
+    .order-success h2 {
+      font-size: 43px;
+    }
+
+    .order-success p {
+      color: var(--ink-soft);
+      font: 13px/1.6 var(--sans);
+      margin: 0 auto 25px;
+      max-width: 390px;
+    }
+
+    @media (max-width: 680px) {
+      .profile-popover {
+        right: 10px;
+        top: 74px;
+      }
+
+      .order-modal {
+        padding: 27px 20px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
-  <div class="announcement"><span class="announcement-dot"></span> Free delivery on orders over ₹499 <span class="announcement-divider"></span> Get 15% off your first order with <strong>FRESH15</strong></div>
-  <header class="site-header"><div class="container-xl header-inner"><button class="icon-button menu-toggle" aria-label="Open navigation" (click)="isMenuOpen.set(!isMenuOpen())">☰</button><a class="brand" href="#top"><span class="brand-mark">◒</span><span><strong>Coco</strong><small>REPUBLIC</small></span></a><nav class="main-nav" [class.is-open]="isMenuOpen()"><a href="#shop">Shop all</a><a href="#best-sellers">Best sellers</a><a href="#story">Our story</a><a href="#wholesale">Wholesale</a></nav><div class="header-actions"><label class="search-box">⌕<input [value]="searchTerm()" (input)="searchTerm.set($any($event.target).value)" placeholder="Search products" aria-label="Search products"><kbd>/</kbd></label><div class="theme-menu"><button class="icon-button" title="Change theme">◐</button><div class="theme-options">@for (theme of themes; track theme) {<button [class.active]="activeTheme() === theme" (click)="setTheme(theme)">{{theme}}</button>}</div></div><button class="icon-button desktop-only" aria-label="Notifications">♧<i>2</i></button><button class="icon-button" aria-label="Wishlist">♡<i>{{wishlistCount()}}</i></button><button class="icon-button" aria-label="Shopping bag">♧<i>{{cartCount()}}</i></button><button class="profile-button"><span>AM</span><b>⌄</b></button></div></div><div class="mega-strip"><div class="container-xl mega-inner"><span>Good stuff inside</span><button (click)="chooseCategory('All products')">All products <b>→</b></button><button (click)="chooseCategory('Single bottles')">Single bottles</button><button (click)="chooseCategory('Case packs')">Case packs</button><button (click)="chooseCategory('Bulk orders')">Bulk orders</button><small>♧ Delivering across India</small></div></div></header>
+  <div class="announcement"><span class="announcement-dot"></span> Free delivery on orders over ₹499 <span
+      class="announcement-divider"></span> Get 15% off your first order with <strong>FRESH15</strong></div>
+  <header class="site-header">
+    <div class="container-xl header-inner"><button class="icon-button menu-toggle" aria-label="Open navigation"
+        (click)="isMenuOpen.set(!isMenuOpen())">☰</button><a class="brand" href="#top"><span
+          class="brand-mark">◒</span><span><strong>Coco</strong><small>REPUBLIC</small></span></a>
+      <nav class="main-nav" [class.is-open]="isMenuOpen()"><a href="#shop">Shop all</a><a href="#best-sellers">Best
+          sellers</a><a href="#story">Our story</a><a href="#wholesale">Wholesale</a></nav>
+      <div class="header-actions"><label class="search-box">⌕<input [value]="searchTerm()"
+            (input)="searchTerm.set($any($event.target).value)" placeholder="Search products"
+            aria-label="Search products"><kbd>/</kbd></label>
+        <div class="theme-menu"><button class="icon-button" title="Change theme">◐</button>
+          <div class="theme-options">@for (theme of themes; track theme) {<button
+              [class.active]="activeTheme() === theme" (click)="setTheme(theme)">{{theme}}</button>}</div>
+        </div><button class="icon-button desktop-only" aria-label="Notifications">♧<i>2</i></button><button
+          class="icon-button" aria-label="Wishlist">♡<i>{{wishlistCount()}}</i></button><button class="icon-button"
+          aria-label="Shopping bag">♧<i>{{cartCount()}}</i></button><button
+          class="profile-button"><span>AM</span><b>⌄</b></button>
+      </div>
+    </div>
+    <div class="mega-strip">
+      <div class="container-xl mega-inner"><span>Good stuff inside</span><button
+          (click)="chooseCategory('All products')">All products <b>→</b></button><button
+          (click)="chooseCategory('Single bottles')">Single bottles</button><button
+          (click)="chooseCategory('Case packs')">Case packs</button><button (click)="chooseCategory('Bulk orders')">Bulk
+          orders</button><small>♧ Delivering across India</small></div>
+    </div>
+  </header>
   <main id="top">
-    <section class="hero container-xl"><div class="hero-copy"><p class="eyebrow"><span></span> Nature's original refreshment</p><h1>Goodness from<br><em>the inside out.</em></h1><p class="hero-description">Straight from the coconut, bottled for your everyday. Pure, refreshing and full of the good stuff your body knows.</p><div class="hero-buttons"><a href="#shop" class="button button-dark">Shop the collection <span>↗</span></a><a href="#story" class="text-link">Why Coco Republic <span>→</span></a></div><div class="hero-proof"><div class="avatar-stack"><span>PS</span><span>RK</span><span>AM</span><b>+</b></div><p><strong>4.9/5</strong> from 2,000+<br>happy sippers</p></div></div><div class="hero-art"><div class="sun-disc"></div><div class="hero-label label-top">100% natural<br><strong>coconut water</strong></div><img src="https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=1000&q=90" alt="Fresh coconuts and tropical leaves"><div class="hero-label label-bottom"><span>01</span><div><strong>Freshly bottled</strong><br>in small batches</div></div><div class="hero-sticker">NO<br><strong>ADDED</strong><br>SUGAR</div></div></section>
-    <section class="trust-row"><div class="container-xl trust-inner"><span>AS SEEN IN</span><strong>VOGUE</strong><strong>Forbes</strong><strong>the huffpost</strong><strong>GQ</strong><strong>well+good</strong></div></section>
-    <section class="section container-xl" id="shop"><div class="section-heading"><div><p class="eyebrow"><span></span> Pick your pleasure</p><h2>Find your new <em>favourite.</em></h2></div><div class="section-controls"><span>{{selectedCategory()}}</span><button class="round-arrow">→</button></div></div><div class="category-pills">@for (category of ['All products','Single bottles','Case packs','Bulk orders']; track category) {<button [class.active]="selectedCategory() === category" (click)="chooseCategory(category)">{{category}}</button>}</div><div class="product-grid">@for (product of filteredProducts(); track product.name) {<article class="product-card"><div class="product-image" [class]="product.tone"><span class="product-tag">{{product.tag}}</span><button class="heart">♡</button><img [src]="product.image" [alt]="product.name" loading="lazy"><div class="quick-view">Quick view <span>↗</span></div></div><div class="product-info"><div class="rating">★ <b>{{product.rating}}</b> <small>(128)</small></div><h3>{{product.name}}</h3><p>{{product.detail}}</p><div class="price-row"><strong>₹{{product.price}}</strong><del>₹{{product.oldPrice}}</del><button class="add-button" (click)="addToCart(product.name)">+</button></div></div></article>} @empty {<div class="empty-state">No bottles found. Try another search.</div>}</div><div class="center-link"><a href="#shop" class="text-link">View all products <span>→</span></a></div></section>
-    <section class="split-feature container-xl" id="story"><div class="feature-image"><img src="https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=1000&q=85" alt="Person enjoying a fresh coconut drink" loading="lazy"><span class="image-note">From farm<br>to feel-good</span></div><div class="feature-copy"><p class="eyebrow"><span></span> Our promise</p><h2>Simple ingredients.<br><em>Serious goodness.</em></h2><p>We believe what you put in should make you feel good. That is why every bottle starts with one humble coconut and ends with a whole lot of happy.</p><div class="benefit-list"><div><span>♧</span><p><strong>Nothing to hide</strong><br>Just coconut water. No concentrates, no compromises.</p></div><div><span>✦</span><p><strong>Good for you, good for the planet</strong><br>Thoughtful sourcing and recyclable packaging.</p></div></div><a href="#story" class="button button-outline">Meet Coco Republic <span>↗</span></a></div></section>
-    <section class="dark-band" id="best-sellers"><div class="container-xl dark-band-inner"><div><p class="eyebrow light"><span></span> The daily ritual</p><h2>Make hydration<br><em>a habit.</em></h2><p>Stock up and save. Your future self will thank you.</p></div><div class="stat-grid"><div><strong>20%</strong><span>off 50+<br>bottles</span></div><div><strong>12</strong><span>months of<br>freshness</span></div><div><strong>0</strong><span>added<br>nasties</span></div></div><a class="button button-light" href="#shop">Shop bulk packs <span>↗</span></a></div></section>
-    <section class="testimonial container-xl"><p class="eyebrow"><span></span> The good word</p><blockquote>“It tastes like a holiday in a bottle. I keep one in my bag, one at my desk, and somehow they still disappear.”</blockquote><div class="quote-footer"><span class="quote-avatar">NS</span><span><strong>Naina Shah</strong><br><small>Verified customer · Mumbai</small></span><div class="quote-dots"><b></b><span></span><span></span><span></span></div></div></section>
-    <section class="newsletter"><div class="container-xl newsletter-inner"><div><p class="eyebrow light"><span></span> Join the good stuff</p><h2>Fresh drops.<br><em>Good news.</em></h2></div><form (submit)="$event.preventDefault(); toast.set('Welcome to the Coco club')"><p>Get 10% off your first order, plus recipes, rituals and the occasional coconut pun.</p><div class="email-input"><input type="email" placeholder="Your email address" required><button>→</button></div><small>By subscribing, you agree to our privacy policy.</small></form></div></section>
+    <section class="hero container-xl">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> Nature's original refreshment</p>
+        <h1>Goodness from<br><em>the inside out.</em></h1>
+        <p class="hero-description">Straight from the coconut, bottled for your everyday. Pure, refreshing and full of
+          the good stuff your body knows.</p>
+        <div class="hero-buttons"><a href="#shop" class="button button-dark">Shop the collection <span>↗</span></a><a
+            href="#story" class="text-link">Why Coco Republic <span>→</span></a></div>
+        <div class="hero-proof">
+          <div class="avatar-stack"><span>PS</span><span>RK</span><span>AM</span><b>+</b></div>
+          <p><strong>4.9/5</strong> from 2,000+<br>happy sippers</p>
+        </div>
+      </div>
+      <div class="hero-art">
+        <div class="sun-disc"></div>
+        <div class="hero-label label-top">100% natural<br><strong>coconut water</strong></div><img
+          src="https://images.unsplash.com/photo-1544982503-9f984c14501a?auto=format&fit=crop&w=1000&q=90"
+          alt="Fresh coconuts and tropical leaves">
+        <div class="hero-label label-bottom"><span>01</span>
+          <div><strong>Freshly bottled</strong><br>in small batches</div>
+        </div>
+        <div class="hero-sticker">NO<br><strong>ADDED</strong><br>SUGAR</div>
+      </div>
+    </section>
+    <section class="trust-row">
+      <div class="container-xl trust-inner"><span>AS SEEN
+          IN</span><strong>VOGUE</strong><strong>Forbes</strong><strong>the
+          huffpost</strong><strong>GQ</strong><strong>well+good</strong></div>
+    </section>
+    <section class="section container-xl" id="shop">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow"><span></span> Pick your pleasure</p>
+          <h2>Find your new <em>favourite.</em></h2>
+        </div>
+        <div class="section-controls"><span>{{selectedCategory()}}</span><button class="round-arrow">→</button></div>
+      </div>
+      <div class="category-pills">@for (category of ['All products','Single bottles','Case packs','Bulk orders']; track
+        category) {<button [class.active]="selectedCategory() === category"
+          (click)="chooseCategory(category)">{{category}}</button>}</div>
+<div class="product-grid">
+  @for (product of data; track product.id) {
+    <article class="product-card">
+      <div class="product-image">
+        <span class="product-tag">{{ product.category }}</span>
+        <button class="heart" type="button">♡</button>
+     <img [src]="getImage(product.image)" [alt]="product.name" loading="lazy">
+        <div class="quick-view" (click)="openQuickView()">Quick view <span>↗</span></div>
+      </div>
+      <div class="product-info">
+        <h3>{{ product.name }}</h3>
+        <p>₹{{ product.price }}</p>
+        <p>📍 {{ product.location }}</p>
+        <p>⭐ {{ product.rating }}</p>
+      </div>
+    </article>
+  } @empty {
+    <div class="empty-state">No products found.</div>
+  }
+</div>
+      <div class="center-link"><a href="#shop" class="text-link">View all products <span>→</span></a></div>
+    </section>
+    <section class="section container-xl" aria-labelledby="members-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow"><span></span> Membership</p>
+          <h2 id="members-heading">Our <em>members.</em></h2>
+        </div>
+      </div>
+    </section>
+    <section class="split-feature container-xl" id="story">
+      <div class="feature-image"><img
+          src="https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=1000&q=85"
+          alt="Person enjoying a fresh coconut drink" loading="lazy"><span class="image-note">From farm<br>to
+          feel-good</span></div>
+      <div class="feature-copy">
+        <p class="eyebrow"><span></span> Our promise</p>
+        <h2>Simple ingredients.<br><em>Serious goodness.</em></h2>
+        <p>We believe what you put in should make you feel good. That is why every bottle starts with one humble coconut
+          and ends with a whole lot of happy.</p>
+        <div class="benefit-list">
+          <div><span>♧</span>
+            <p><strong>Nothing to hide</strong><br>Just coconut water. No concentrates, no compromises.</p>
+          </div>
+          <div><span>✦</span>
+            <p><strong>Good for you, good for the planet</strong><br>Thoughtful sourcing and recyclable packaging.</p>
+          </div>
+        </div><a href="#story" class="button button-outline">Meet Coco Republic <span>↗</span></a>
+      </div>
+    </section>
+    <section class="dark-band" id="best-sellers">
+      <div class="container-xl dark-band-inner">
+        <div>
+          <p class="eyebrow light"><span></span> The daily ritual</p>
+          <h2>Make hydration<br><em>a habit.</em></h2>
+          <p>Stock up and save. Your future self will thank you.</p>
+        </div>
+        <div class="stat-grid">
+          <div><strong>20%</strong><span>off 50+<br>bottles</span></div>
+          <div><strong>12</strong><span>months of<br>freshness</span></div>
+          <div><strong>0</strong><span>added<br>nasties</span></div>
+        </div><a class="button button-light" href="#shop">Shop bulk packs <span>↗</span></a>
+      </div>
+    </section>
+    <section class="testimonial container-xl">
+      <p class="eyebrow"><span></span> The good word</p>
+      <blockquote>“It tastes like a holiday in a bottle. I keep one in my bag, one at my desk, and somehow they still
+        disappear.”</blockquote>
+      <div class="quote-footer"><span class="quote-avatar">NS</span><span><strong>Naina Shah</strong><br><small>Verified
+            customer · Mumbai</small></span>
+        <div class="quote-dots"><b></b><span></span><span></span><span></span></div>
+      </div>
+    </section>
+    <section class="newsletter">
+      <div class="container-xl newsletter-inner">
+        <div>
+          <p class="eyebrow light"><span></span> Join the good stuff</p>
+          <h2>Fresh drops.<br><em>Good news.</em></h2>
+        </div>
+        <form (submit)="$event.preventDefault(); toast.set('Welcome to the Coco club')">
+          <p>Get 10% off your first order, plus recipes, rituals and the occasional coconut pun.</p>
+          <div class="email-input"><input type="email" placeholder="Your email address" required><button>→</button>
+          </div><small>By subscribing, you agree to our privacy policy.</small>
+        </form>
+      </div>
+    </section>
   </main>
-  <footer class="site-footer"><div class="container-xl footer-grid"><div class="footer-brand"><a class="brand" href="#top"><span class="brand-mark">◒</span><span><strong>Coco</strong><small>REPUBLIC</small></span></a><p>Goodness from the inside out.<br>Made for real life.</p><div class="socials"><span>◎</span><span>◉</span><span>◌</span></div></div><div><h4>Explore</h4><a href="#shop">Shop all</a><a href="#best-sellers">Best sellers</a><a href="#story">Our story</a><a href="#wholesale">Wholesale</a></div><div><h4>Need help?</h4><a href="#top">Contact us</a><a href="#top">Delivery & returns</a><a href="#top">FAQs</a><a href="#top">Track my order</a></div><div><h4>Follow along</h4><p class="footer-note">Good energy, served daily.<br><strong>@cocorepublic</strong></p><span class="status"><i></i> Currently shipping nationwide</span></div></div><div class="container-xl footer-bottom"><span>© 2024 Coco Republic</span><span>Privacy · Terms · Accessibility</span><span>Made with good energy</span></div></footer>
-  <button class="sam-button" [class.open]="isAssistantOpen()" (click)="toggleAssistant()"><span class="sam-face">✦</span><span class="sam-label">Need help?<strong>Chat with Sam</strong></span><b>1</b></button>
-  @if (isAssistantOpen()) {<aside class="sam-drawer"><div class="sam-head"><div><span class="sam-face">✦</span><strong>Sam <small>● online</small></strong></div><button (click)="toggleAssistant()">×</button></div><div class="sam-body"><div class="sam-welcome"><small>Today, 10:42 AM</small><p>Hi there! I’m Sam, your Coco Republic guide. How can I make your day a little fresher?</p></div><p class="suggestion-label">Try asking me about</p><div class="suggestions"><button>Track my order</button><button>Current offers</button><button>Bulk pricing</button><button>Product info</button></div></div><div class="sam-input"><input placeholder="Write a message..." aria-label="Chat message"><button>↑</button></div></aside>}
+  <footer class="site-footer">
+    <div class="container-xl footer-grid">
+      <div class="footer-brand"><a class="brand" href="#top"><span
+            class="brand-mark">◒</span><span><strong>Coco</strong><small>REPUBLIC</small></span></a>
+        <p>Goodness from the inside out.<br>Made for real life.</p>
+        <div class="socials"><span>◎</span><span>◉</span><span>◌</span></div>
+      </div>
+      <div>
+        <h4>Explore</h4><a href="#shop">Shop all</a><a href="#best-sellers">Best sellers</a><a href="#story">Our
+          story</a><a href="#wholesale">Wholesale</a>
+      </div>
+      <div>
+        <h4>Need help?</h4><a href="#top">Contact us</a><a href="#top">Delivery & returns</a><a href="#top">FAQs</a><a
+          href="#top">Track my order</a>
+      </div>
+      <div>
+        <h4>Follow along</h4>
+        <p class="footer-note">Good energy, served daily.<br><strong>@cocorepublic</strong></p><span
+          class="status"><i></i> Currently shipping nationwide</span>
+      </div>
+    </div>
+    <div class="container-xl footer-bottom"><span>© 2024 Coco Republic</span><span>Privacy · Terms ·
+        Accessibility</span><span>Made with good energy</span></div>
+  </footer>
+  <button class="sam-button" [class.open]="isAssistantOpen()" (click)="toggleAssistant()"><span
+      class="sam-face">✦</span><span class="sam-label">Need help?<strong>Chat with Sam</strong></span><b>1</b></button>
+  @if (isAssistantOpen()) {<aside class="sam-drawer">
+    <div class="sam-head">
+      <div><span class="sam-face">✦</span><strong>Sam <small>● online</small></strong></div><button
+        (click)="toggleAssistant()">×</button>
+    </div>
+    <div class="sam-body">
+      <div class="sam-welcome"><small>Today, 10:42 AM</small>
+        <p>Hi there! I’m Sam, your Coco Republic guide. How can I make your day a little fresher?</p>
+      </div>
+      <p class="suggestion-label">Try asking me about</p>
+      <div class="suggestions"><button>Track my order</button><button>Current offers</button><button>Bulk
+          pricing</button><button>Product info</button></div>
+    </div>
+    <div class="sam-input"><input placeholder="Write a message..." aria-label="Chat message"><button>↑</button></div>
+  </aside>}
   @if (toast()) {<div class="toast-message">✓ {{toast()}}</div>}
-  <section class="coconut-gallery container-xl" aria-labelledby="gallery-title"><div class="gallery-heading"><div><p class="eyebrow"><span></span> Coconut juice gallery</p><h2 id="gallery-title">Made for your <em>moment.</em></h2></div><span class="gallery-count">{{galleryIndex() + 1}} / {{galleryImages.length}}</span></div><div class="gallery-carousel"><div class="gallery-track" [style.transform]="'translateX(-' + (galleryIndex() * 100) + '%)'">@for (image of galleryImages; track $index) {<div class="gallery-slide"><img [src]="image" [alt]="'Coconut juice serving ' + ($index + 1)" loading="lazy"><span>Fresh coconut juice · {{($index % 4) + 1}} / 20</span></div>}</div><button class="carousel-control-prev" type="button" aria-label="Previous coconut juice image" (click)="moveGallery(-1)"><span class="carousel-control-prev-icon" aria-hidden="true"></span></button><button class="carousel-control-next" type="button" aria-label="Next coconut juice image" (click)="moveGallery(1)"><span class="carousel-control-next-icon" aria-hidden="true"></span></button></div><div class="gallery-thumbs">@for (image of galleryImages; track $index) {<button [class.active]="galleryIndex() === $index" (click)="galleryIndex.set($index)" [attr.aria-label]="'Show gallery image ' + ($index + 1)"><img [src]="image" alt=""></button>}</div></section>
-  @if (isProfileOpen()) {<div class="profile-popover is-open"><strong>Hi, Amara</strong><small>Customer account</small><button (click)="openOrderForm()">＋ New order</button><button>♡ Wishlist <span>{{wishlistCount()}}</span></button><button>⚙ Account settings</button><button class="sign-out">Sign out</button></div>}
-  @if (isOrderFormOpen()) {<div class="modal-backdrop" (click)="closeOrderForm()"><section class="order-modal" role="dialog" aria-modal="true" aria-labelledby="order-title" (click)="$event.stopPropagation()"><button class="modal-close" (click)="closeOrderForm()" aria-label="Close order form">×</button>@if (!orderSubmitted()) {<p class="eyebrow"><span></span> Fresh to your door</p><h2 id="order-title">Place your <em>order.</em></h2><p class="modal-intro">Tell us what you need and our team will confirm delivery within one business day.</p><form class="order-form" (submit)="$event.preventDefault(); submitOrder()"><label>Choose your pack<select required><option value="">Select a product</option><option>Original Coconut Juice · 200ml · 12 pack</option><option>Coconut Water Pure · 400ml · Single bottle</option><option>Family Fresh Case · 1 Liter · 6 pack</option><option>Daily Reset · 250ml · 12 pack</option></select></label><div class="form-row"><label>Quantity<input type="number" min="1" value="1" required></label><label>Delivery preference<select><option>Standard delivery</option><option>Express delivery</option></select></label></div><label>Full name<input type="text" placeholder="Your name" required></label><div class="form-row"><label>Email<input type="email" placeholder="you@example.com" required></label><label>Mobile number<input type="tel" placeholder="+91 98765 43210" required></label></div><label>Delivery address<textarea rows="3" placeholder="House number, street, city and pincode" required></textarea></label><button class="button button-dark order-submit" type="submit">Send order request <span>↗</span></button></form>} @else {<div class="order-success"><span>✓</span><h2>Order request <em>sent.</em></h2><p>Thanks, Amara. Our team will call you shortly to confirm your pack, delivery address and payment.</p><button class="button button-dark" (click)="closeOrderForm()">Continue shopping</button></div>}</section></div>}
-  @if (isNotificationsOpen()) {<aside class="notification-panel"><div class="notification-panel-head"><strong>Notifications</strong><button (click)="markNotificationsRead()">Mark all read</button></div><div class="notification-item" [class.unread]="unreadNotifications() > 0"><span>♧</span><p><strong>Fresh offer unlocked</strong><br><small>Get 15% off your next coconut juice order.</small></p></div><div class="notification-item" [class.unread]="unreadNotifications() > 1"><span>✓</span><p><strong>Order update</strong><br><small>Your last order is ready for delivery.</small></p></div><div class="notification-empty" [class.visible]="unreadNotifications() === 0">You're all caught up.</div></aside>}
+  <section class="coconut-gallery container-xl" aria-labelledby="gallery-title">
+    <div class="gallery-heading">
+      <div>
+        <p class="eyebrow"><span></span> Coconut juice gallery</p>
+        <h2 id="gallery-title">Made for your <em>moment.</em></h2>
+      </div><span class="gallery-count">{{galleryIndex() + 1}} / {{galleryImages.length}}</span>
+    </div>
+    <div class="gallery-carousel">
+      <div class="gallery-track" [style.transform]="'translateX(-' + (galleryIndex() * 100) + '%)'">@for (image of
+        galleryImages; track $index) {<div class="gallery-slide"><img [src]="image"
+            [alt]="'Coconut juice serving ' + ($index + 1)" loading="lazy"><span>Fresh coconut juice · {{($index % 4) +
+            1}} / 20</span></div>}</div><button class="carousel-control-prev" type="button"
+        aria-label="Previous coconut juice image" (click)="moveGallery(-1)"><span class="carousel-control-prev-icon"
+          aria-hidden="true"></span></button><button class="carousel-control-next" type="button"
+        aria-label="Next coconut juice image" (click)="moveGallery(1)"><span class="carousel-control-next-icon"
+          aria-hidden="true"></span></button>
+    </div>
+    <div class="gallery-thumbs">@for (image of galleryImages; track $index) {<button
+        [class.active]="galleryIndex() === $index" (click)="galleryIndex.set($index)"
+        [attr.aria-label]="'Show gallery image ' + ($index + 1)"><img [src]="image" alt=""></button>}</div>
+  </section>
+  @if (isProfileOpen()) {<div class="profile-popover is-open"><strong>Hi, Amara</strong><small>Customer
+      account</small><button (click)="openOrderForm()">＋ New order</button><button>♡ Wishlist
+      <span>{{wishlistCount()}}</span></button><button>⚙ Account settings</button><button class="sign-out">Sign
+      out</button></div>}
+  @if (isOrderFormOpen()) {<div class="modal-backdrop" (click)="closeOrderForm()">
+    <section class="order-modal" role="dialog" aria-modal="true" aria-labelledby="order-title"
+      (click)="$event.stopPropagation()"><button class="modal-close" (click)="closeOrderForm()"
+        aria-label="Close order form">×</button>@if (!orderSubmitted()) {<p class="eyebrow"><span></span> Fresh to your
+        door</p>
+      <h2 id="order-title">Place your <em>order.</em></h2>
+      <p class="modal-intro">Tell us what you need and our team will confirm delivery within one business day.</p>
+      <form class="order-form" (submit)="$event.preventDefault(); submitOrder()"><label>Choose your pack<select
+            required>
+            <option value="">Select a product</option>
+            <option>Original Coconut Juice · 200ml · 12 pack</option>
+            <option>Coconut Water Pure · 400ml · Single bottle</option>
+            <option>Family Fresh Case · 1 Liter · 6 pack</option>
+            <option>Daily Reset · 250ml · 12 pack</option>
+          </select></label>
+        <div class="form-row"><label>Quantity<input type="number" min="1" value="1" required></label><label>Delivery
+            preference<select>
+              <option>Standard delivery</option>
+              <option>Express delivery</option>
+            </select></label></div><label>Full name<input type="text" placeholder="Your name" required></label>
+        <div class="form-row"><label>Email<input type="email" placeholder="you@example.com"
+              required></label><label>Mobile number<input type="tel" placeholder="+91 98765 43210" required></label>
+        </div><label>Delivery address<textarea rows="3" placeholder="House number, street, city and pincode"
+            required></textarea></label><button class="button button-dark order-submit" type="submit">Send order request
+          <span>↗</span></button>
+      </form>} @else {<div class="order-success"><span>✓</span>
+        <h2>Order request <em>sent.</em></h2>
+        <p>Thanks, Amara. Our team will call you shortly to confirm your pack, delivery address and payment.</p><button
+          class="button button-dark" (click)="closeOrderForm()">Continue shopping</button>
+      </div>}
+    </section>
+  </div>}
+  @if (isNotificationsOpen()) {<aside class="notification-panel">
+    <div class="notification-panel-head"><strong>Notifications</strong><button (click)="markNotificationsRead()">Mark
+        all read</button></div>
+    <div class="notification-item" [class.unread]="unreadNotifications() > 0"><span>♧</span>
+      <p><strong>Fresh offer unlocked</strong><br><small>Get 15% off your next coconut juice order.</small></p>
+    </div>
+    <div class="notification-item" [class.unread]="unreadNotifications() > 1"><span>✓</span>
+      <p><strong>Order update</strong><br><small>Your last order is ready for delivery.</small></p>
+    </div>
+    <div class="notification-empty" [class.visible]="unreadNotifications() === 0">You're all caught up.</div>
+  </aside>}
 </div>
