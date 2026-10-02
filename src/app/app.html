@@ -8,10 +8,10 @@
         [alt]="'Coconut juice quick view ' + (quickViewIndex() + 1)"><button class="quick-view-prev"
         (click)="moveQuickView(-1)" aria-label="Previous quick view image">&lt;</button><button class="quick-view-next"
         (click)="moveQuickView(1)" aria-label="Next quick view image">&gt;</button></div>
-    <div class="quick-view-thumbs">@for (image of quickViewImages; track $index) {<button
+    <div class="quick-view-thumbs">@for (image of quickViewImages(); track $index) {<button
         [class.active]="quickViewIndex() === $index" (click)="quickViewIndex.set($index)"
         [attr.aria-label]="'Show quick view image ' + ($index + 1)"><img [src]="image" alt=""></button>}</div>
-    <p class="quick-view-count">{{quickViewIndex() + 1}} / {{quickViewImages.length}} coconut juice images</p>
+    <p class="quick-view-count">{{quickViewIndex() + 1}} / {{quickViewImages().length}} coconut juice images</p>
   </section>
 </div>}
 <div class="app-shell">
@@ -272,34 +272,26 @@
       <div class="category-pills">@for (category of ['All products','Single bottles','Case packs','Bulk orders']; track
         category) {<button [class.active]="selectedCategory() === category"
           (click)="chooseCategory(category)">{{category}}</button>}</div>
-      <div class="product-grid">@for (product of filteredProducts(); track product.name) {<article class="product-card">
-          <div class="product-image" [class]="product.tone"><span class="product-tag">{{product.tag}}</span><button
-              class="heart">♡</button><img [src]="product.image" [alt]="product.name" loading="lazy">
-            <div class="quick-view">Quick view <span>↗</span></div>
-          </div>
-          <div class="member-list">
-            @for (member of data; track member.id) {
-              <article class="member-item">
-                <h3>{{member.fullName}}</h3>
-                <p>{{member.email}}</p>
-                <p>{{member.phone}}</p>
-                <p>{{member.joinDate}}</p>
-                <p>{{member.member_TablehipPlan}}</p>
-              </article>
-            } @empty {
-              <p>No members found.</p>
-            }
-          </div>
-          <!--
-          <div class="product-info">
-            <div class="rating">★ <b>{{product.rating}}</b> <small>(128)</small></div>
-            <h3>{{product.name}}</h3>
-            <p>{{product.detail}}</p>
-            <div class="price-row"><strong>₹{{product.price}}</strong><del>₹{{product.oldPrice}}</del><button
-                class="add-button" (click)="addToCart(product.name)">+</button></div>
-          </div>
-          -->
-        </article>} @empty {<div class="empty-state">No bottles found. Try another search.</div>}</div>
+<div class="product-grid">
+  @for (product of data; track product.id) {
+    <article class="product-card">
+      <div class="product-image">
+        <span class="product-tag">{{ product.category }}</span>
+        <button class="heart" type="button">♡</button>
+     <img [src]="getImage(product.image)" [alt]="product.name" loading="lazy">
+        <div class="quick-view" (click)="openQuickView()">Quick view <span>↗</span></div>
+      </div>
+      <div class="product-info">
+        <h3>{{ product.name }}</h3>
+        <p>₹{{ product.price }}</p>
+        <p>📍 {{ product.location }}</p>
+        <p>⭐ {{ product.rating }}</p>
+      </div>
+    </article>
+  } @empty {
+    <div class="empty-state">No products found.</div>
+  }
+</div>
       <div class="center-link"><a href="#shop" class="text-link">View all products <span>→</span></a></div>
     </section>
     <section class="section container-xl" aria-labelledby="members-heading">
@@ -309,19 +301,6 @@
           <h2 id="members-heading">Our <em>members.</em></h2>
         </div>
       </div>
-      <!-- <div class="member-list">
-        @for (member of data; track member.id) {
-          <article class="member-item">
-            <h3>{{member.fullName}}</h3>
-            <p>{{member.email}}</p>
-            <p>{{member.phone}}</p>
-            <p>{{member.joinDate}}</p>
-            <p>{{member.member_TablehipPlan}}</p>
-          </article>
-        } @empty {
-          <p>No members found.</p>
-        }
-      </div> -->
     </section>
     <section class="split-feature container-xl" id="story">
       <div class="feature-image"><img

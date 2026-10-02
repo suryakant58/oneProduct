@@ -2,26 +2,26 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-export interface MemberData {
+export interface ProductData {
   id: number;
-  fullName: string;
-  email: string;
-  phone: string;
-  joinDate: string;
-  member_TablehipPlan: string;
+  name: string;
+  price: number;
+  category: string;
+  location: string;
+  image: string;
+  rating: number;
 }
 
 @Injectable({
   providedIn: 'root'
 })
-export class Member {
+export class ProductService {
 
-  private apiUrl = 'https://localhost:7181/api/Member_Table';
+  private apiUrl = 'https://localhost:7181/api/Product';
 
   constructor(private http: HttpClient) {}
 
-  getMembers(): Observable<MemberData[]> {
-    console.log('Fetching members from API:', this.apiUrl);
-    return this.http.get<MemberData[]>(this.apiUrl);
+  getProducts(): Observable<ProductData[]> {
+    return this.http.get<ProductData[]>(this.apiUrl);
   }
 }

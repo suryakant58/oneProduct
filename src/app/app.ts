@@ -1,6 +1,6 @@
-import { Component, HostListener, computed, signal } from '@angular/core';
-import { Member, MemberData } from './services/member';
-import { AnonymousSubject } from 'rxjs/internal/Subject';
+import { ChangeDetectorRef, Component, HostListener, OnInit, computed, signal } from '@angular/core';
+import { ProductService, ProductData } from './services/member';
+
 
 @Component({
   selector: 'app-root',
@@ -8,16 +8,34 @@ import { AnonymousSubject } from 'rxjs/internal/Subject';
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
-
 export class App {
-  data: MemberData[] = [];
-  constructor(private getMember: Member) {
-    console.log('constructor called');
-  getMember.getMembers().subscribe((members) => {
-    this.data = members;
-      console.log('Members fetched:', this.data);
-    });
-  }
+    studentImages = [
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80'
+  ];
+  data: ProductData[] = [];
+
+  constructor(private productService: ProductService, private cdr: ChangeDetectorRef) {}
+
+private readonly apiBase = 'https://localhost:7181';
+
+getImage(path: string): string {
+  if (!path) return '';
+  return path.startsWith('http') ? path : this.apiBase + path;
+}
+  
+ ngOnInit() {
+  this.productService.getProducts().subscribe({
+    next: (res: ProductData[]) => { this.data = res; this.cdr.detectChanges(); },
+    error: (err: any) => console.error('API error', err)
+  });
+}
 
   protected readonly themes = ['Light', 'Tropical', 'Midnight', 'Corporate', 'Glossy'] as const;
   protected readonly activeTheme = signal<(typeof this.themes)[number]>('Tropical');
@@ -57,11 +75,7 @@ export class App {
     'https://images.unsplash.com/photo-1528825871115-3581a5387919?auto=format&fit=crop&w=1000&q=85',
     'https://images.unsplash.com/photo-1487215078519-e21cc028cb29?auto=format&fit=crop&w=1000&q=85'
   ];
-  protected readonly quickViewImages: any = Object.assign(
-    ((first?: unknown, second?: unknown, third?: unknown, fourth?: unknown, fifth?: unknown, sixth?: unknown, seventh?: unknown, eighth?: unknown, ninth?: unknown, tenth?: unknown) => this.quickViewImageUrls[Number(first) || 0]),
-    this.quickViewImageUrls,
-    { [Symbol.iterator]: this.quickViewImageUrls[Symbol.iterator].bind(this.quickViewImageUrls) }
-  );
+protected readonly quickViewImages = signal(this.quickViewImageUrls);
   protected readonly galleryImages = [
     'https://images.unsplash.com/photo-1545247181-516773cae754?auto=format&fit=crop&w=900&q=85',
     'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=900&q=85',
@@ -114,6 +128,11 @@ export class App {
     return products.slice(page * pageSize, page * pageSize + pageSize);
   });
 
+getProduct(i: number) {
+  const list = this.filteredProducts();
+  return list.length ? list[i % list.length] : null;
+}
+
   protected setTheme(theme: (typeof this.themes)[number]): void {
     this.activeTheme.set(theme);
     localStorage.setItem('oneProduct-theme', theme);
@@ -146,9 +165,11 @@ export class App {
   }
   protected openQuickView(): void { this.quickViewIndex.set(0); this.isQuickViewOpen.set(true); }
   protected closeQuickView(): void { this.isQuickViewOpen.set(false); }
-  protected moveQuickView(direction: number): void {
-    this.quickViewIndex.update((index) => (index + direction + this.quickViewImages.length) % this.quickViewImages.length);
-  }
+protected moveQuickView(direction: number): void {
+  this.quickViewIndex.update(
+    (index) => (index + direction + this.quickViewImages().length) % this.quickViewImages().length
+  );
+}
   protected moveProductPage(direction: number): void {
     const pageCount = Math.max(1, Math.ceil(this.allFilteredProducts().length / 8));
     this.productPage.update((page) => (page + direction + pageCount) % pageCount);
