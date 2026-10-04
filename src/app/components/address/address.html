@@ -1,0 +1,165 @@
+<main class="checkout-step address-step">
+  <ol class="stepper" aria-label="Checkout progress">
+    @for (step of steps; track step; let i = $index) {
+      <li [class.done]="i < 1" [class.active]="i === 1">
+        <span class="step-num">{{ i < 1 ? '✓' : i + 1 }}</span>
+        <span class="step-name">{{ step }}</span>
+      </li>
+    }
+  </ol>
+
+  <div class="page-head">
+    <h1>Delivery address</h1>
+    <p>Where should we send your fresh coconut goodness?</p>
+  </div>
+
+  @if (offline()) {
+    <p class="note" role="status">
+      ℹ️ Server not connected – addresses are saved on this device only for now.
+    </p>
+  }
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+
+  <div class="address-layout">
+    <!-- LEFT: addresses + form -->
+    <div class="address-main">
+      @if (loading()) {
+        <p class="muted">Loading your saved addresses…</p>
+      } @else {
+
+        @if (addresses().length) {
+          <section class="saved">
+            <h2>Saved addresses</h2>
+            <div class="address-grid">
+              @for (a of addresses(); track a.addressId) {
+                <label class="address-card" [class.selected]="selectedId() === a.addressId">
+                  <input type="radio" name="address" [checked]="selectedId() === a.addressId"
+                    (change)="selectedId.set(a.addressId ?? null)" />
+                  <div class="address-body">
+                    <div class="address-top">
+                      <strong>{{ a.fullName }}</strong>
+                      @if (a.isDefault) { <span class="badge">Default</span> }
+                    </div>
+                    <p>{{ a.addressLine1 }}@if (a.addressLine2) {, {{ a.addressLine2 }}}</p>
+                    <p>{{ a.city }}, {{ a.state }} – {{ a.zipCode }}</p>
+                    <p>{{ a.country }}</p>
+                    <p class="phone">📞 {{ a.phoneNumber }}</p>
+                  </div>
+                </label>
+              }
+            </div>
+
+            @if (!showForm()) {
+              <button type="button" class="link-btn" (click)="showForm.set(true)">+ Add a new address</button>
+            }
+          </section>
+        }
+
+        @if (showForm()) {
+          <form class="address-form" [formGroup]="form" (ngSubmit)="saveAddress()" novalidate>
+            <h2>{{ addresses().length ? 'New address' : 'Add your address' }}</h2>
+
+            <div class="row">
+              <label>Full name
+                <input type="text" formControlName="fullName" placeholder="Your name" autocomplete="name" />
+                @if (invalid('fullName')) { <small class="err">Enter your full name (min 3 characters).</small> }
+              </label>
+              <label>Mobile number
+                <input type="tel" formControlName="phoneNumber" placeholder="98765 43210" maxlength="10"
+                  autocomplete="tel" />
+                @if (invalid('phoneNumber')) { <small class="err">Enter a valid 10-digit mobile number.</small> }
+              </label>
+            </div>
+
+            <label>Address line 1
+              <input type="text" formControlName="addressLine1" placeholder="House no., building, street"
+                autocomplete="address-line1" />
+              @if (invalid('addressLine1')) { <small class="err">Address line 1 is required.</small> }
+            </label>
+
+            <label>Address line 2 <em>(optional)</em>
+              <input type="text" formControlName="addressLine2" placeholder="Area, landmark"
+                autocomplete="address-line2" />
+            </label>
+
+            <div class="row">
+              <label>City
+                <input type="text" formControlName="city" placeholder="City" autocomplete="address-level2" />
+                @if (invalid('city')) { <small class="err">City is required.</small> }
+              </label>
+              <label>State
+                <select formControlName="state">
+                  <option value="">Select state</option>
+                  @for (s of states; track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+                @if (invalid('state')) { <small class="err">Please select a state.</small> }
+              </label>
+            </div>
+
+            <div class="row">
+              <label>PIN code
+                <input type="text" formControlName="zipCode" placeholder="6-digit PIN" maxlength="6"
+                  autocomplete="postal-code" />
+                @if (invalid('zipCode')) { <small class="err">Enter a valid 6-digit PIN code.</small> }
+              </label>
+              <label>Country
+                <input type="text" formControlName="country" />
+              </label>
+            </div>
+
+            <label class="check">
+              <input type="checkbox" formControlName="isDefault" />
+              Make this my default address
+            </label>
+
+            <div class="form-actions">
+              <button type="submit" class="save-btn" [disabled]="saving()">
+                {{ saving() ? 'Saving…' : 'Save address' }}
+              </button>
+              @if (addresses().length) {
+                <button type="button" class="cancel-btn" (click)="cancelForm()">Cancel</button>
+              }
+            </div>
+          </form>
+        }
+      }
+    </div>
+
+    <!-- RIGHT: order summary -->
+    <aside class="order-summary">
+      <h2>Your order</h2>
+
+      @if (items().length) {
+        <ul class="summary-items">
+          @for (item of items(); track item.id) {
+            <li>
+              <img [src]="item.image" [alt]="item.name" />
+              <div>
+                <strong>{{ item.name }}</strong>
+                <small>Qty {{ item.qty }}</small>
+              </div>
+              <span>{{ money(item.price * item.qty) }}</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="muted">Your cart is empty.</p>
+      }
+
+      <dl class="summary-totals">
+        <div><dt>Subtotal</dt><dd>{{ money(subtotal()) }}</dd></div>
+        <div><dt>Delivery</dt><dd>{{ delivery() === 0 ? 'Free' : money(delivery()) }}</dd></div>
+        <div class="grand"><dt>Total</dt><dd>{{ money(total()) }}</dd></div>
+      </dl>
+    </aside>
+  </div>
+
+  <footer class="checkout-actions">
+    <button class="checkout-previous" type="button" (click)="previous.emit()">Back to cart</button>
+    <button class="checkout-next" type="button" (click)="proceed()" [disabled]="!selectedId()">
+      Continue to payment
+    </button>
+  </footer>
+</main>

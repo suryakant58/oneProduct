@@ -1,0 +1,121 @@
+<main class="pay-page">
+  <div class="pay-card">
+    <!-- Header -->
+    <header class="pay-head">
+      <button type="button" class="back-btn" (click)="previous.emit()" aria-label="Back to address">←</button>
+      <h1>Complete Payment</h1>
+      <span class="secure">🔒 100% Secure</span>
+    </header>
+
+    <div class="pay-grid">
+      <!-- LEFT: methods -->
+      <nav class="methods" aria-label="Payment methods">
+        @for (m of methods; track m.id) {
+          <button type="button" class="method" [class.active]="method() === m.id" (click)="choose(m.id)">
+            <span class="method-icon">{{ m.icon }}</span>
+            <span class="method-text">
+              <strong>{{ m.title }}</strong>
+              <small>{{ m.sub }}</small>
+            </span>
+          </button>
+        }
+        <button type="button" class="method disabled" disabled>
+          <span class="method-icon">％</span>
+          <span class="method-text">
+            <strong>EMI</strong>
+            <small>Unavailable</small>
+          </span>
+        </button>
+      </nav>
+
+      <!-- MIDDLE: selected method -->
+      <section class="method-panel">
+        @switch (method()) {
+
+          @case ('UPI') {
+            <h2>Pay with UPI</h2>
+            <p class="hint">Enter your UPI ID and approve the request in your UPI app.</p>
+            <form [formGroup]="upiForm" (ngSubmit)="pay()" novalidate>
+              <label>UPI ID
+                <input type="text" formControlName="upiId" placeholder="name@bank" autocomplete="off" />
+                @if (showError('upi', 'upiId')) { <small class="err">Enter a valid UPI ID, e.g. name@okaxis</small> }
+              </label>
+              <button type="submit" class="pay-btn">Pay {{ money(total()) }}</button>
+            </form>
+          }
+
+          @case ('Card') {
+            <h2>Credit / Debit / ATM Card</h2>
+            <p class="hint">Your card details are only used for this payment.</p>
+            <form [formGroup]="cardForm" (ngSubmit)="pay()" novalidate>
+              <label>Card number
+                <input type="text" inputmode="numeric" formControlName="number" placeholder="1234 5678 9012 3456"
+                  (input)="formatCard($event)" autocomplete="cc-number" />
+                @if (showError('card', 'number')) { <small class="err">Enter a valid 16-digit card number.</small> }
+              </label>
+              <label>Name on card
+                <input type="text" formControlName="name" placeholder="As printed on card" autocomplete="cc-name" />
+                @if (showError('card', 'name')) { <small class="err">Enter the name on the card.</small> }
+              </label>
+              <div class="row">
+                <label>Expiry
+                  <input type="text" inputmode="numeric" formControlName="expiry" placeholder="MM/YY"
+                    (input)="formatExpiry($event)" autocomplete="cc-exp" />
+                  @if (showError('card', 'expiry')) { <small class="err">Use MM/YY.</small> }
+                </label>
+                <label>CVV
+                  <input type="password" inputmode="numeric" formControlName="cvv" placeholder="•••" maxlength="3"
+                    autocomplete="cc-csc" />
+                  @if (showError('card', 'cvv')) { <small class="err">3 digits.</small> }
+                </label>
+              </div>
+              <button type="submit" class="pay-btn">Pay {{ money(total()) }}</button>
+            </form>
+          }
+
+          @case ('COD') {
+            <h2>Cash on Delivery</h2>
+            <p class="hint">
+              Due to handling costs, a nominal fee of {{ money(20) }} will be charged for orders placed using this
+              option. Avoid this fee by paying online now.
+            </p>
+            <button type="button" class="pay-btn" (click)="pay()">Place Order</button>
+          }
+        }
+      </section>
+
+      <!-- RIGHT: price details -->
+      <aside class="price-box">
+        @if (address(); as a) {
+          <div class="deliver-to">
+            <div class="deliver-top">
+              <span>Deliver to</span>
+              <button type="button" class="link-btn" (click)="previous.emit()">Change</button>
+            </div>
+            <strong>{{ a.fullName }}</strong>
+            <p>{{ a.addressLine1 }}@if (a.addressLine2) {, {{ a.addressLine2 }}}</p>
+            <p>{{ a.city }}, {{ a.state }} – {{ a.zipCode }}</p>
+            <p>📞 {{ a.phoneNumber }}</p>
+          </div>
+        }
+
+        <h3>Price details</h3>
+        <dl>
+          <div><dt>Price ({{ itemCount() }} {{ itemCount() === 1 ? 'item' : 'items' }})</dt><dd>{{ money(subtotal()) }}</dd></div>
+          @if (discount() > 0) {
+            <div class="green"><dt>Coupon discount</dt><dd>− {{ money(discount()) }}</dd></div>
+          }
+          <div><dt>Delivery charges</dt><dd>{{ delivery() === 0 ? 'Free' : money(delivery()) }}</dd></div>
+          @if (codFee() > 0) {
+            <div><dt>Payment handling fee</dt><dd>{{ money(codFee()) }}</dd></div>
+          }
+          <div class="total"><dt>Total amount</dt><dd>{{ money(total()) }}</dd></div>
+        </dl>
+
+        @if (discount() > 0) {
+          <p class="saving">🎉 You will save {{ money(discount()) }} on this order</p>
+        }
+      </aside>
+    </div>
+  </div>
+</main>

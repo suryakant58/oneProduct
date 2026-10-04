@@ -1,0 +1,121 @@
+<main class="order-page">
+  @if (!placed()) {
+    <ol class="stepper" aria-label="Checkout progress">
+      @for (step of steps; track step; let i = $index) {
+        <li [class.done]="i < 3" [class.active]="i === 3">
+          <span class="step-num">{{ i < 3 ? '✓' : i + 1 }}</span>
+          <span class="step-name">{{ step }}</span>
+        </li>
+      }
+    </ol>
+
+    <div class="page-head">
+      <h1>Review &amp; place order</h1>
+      <p>One last look before we start packing your order.</p>
+    </div>
+
+    @if (!address() || !payment()) {
+      <p class="alert" role="alert">
+        Please choose a delivery address and payment method before placing your order.
+      </p>
+    }
+
+    <div class="order-layout">
+      <!-- LEFT -->
+      <div class="order-main">
+
+        <section class="block">
+          <div class="block-head">
+            <h2>Delivery address</h2>
+            <button type="button" class="link-btn" (click)="changeAddress.emit()">Change</button>
+          </div>
+          @if (address(); as a) {
+            <strong>{{ a.fullName }}</strong>
+            <p>{{ a.addressLine1 }}@if (a.addressLine2) {, {{ a.addressLine2 }}}</p>
+            <p>{{ a.city }}, {{ a.state }} – {{ a.zipCode }}</p>
+            <p>📞 {{ a.phoneNumber }}</p>
+          } @else {
+            <p class="muted">No address selected.</p>
+          }
+        </section>
+
+        <section class="block">
+          <div class="block-head">
+            <h2>Payment method</h2>
+            <button type="button" class="link-btn" (click)="previous.emit()">Change</button>
+          </div>
+          @if (payment(); as p) {
+            <strong>{{ methodLabel(p.paymentMethod) }}</strong>
+            @if (p.detail) { <p>{{ p.detail }}</p> }
+            @if (p.paymentMethod === 'COD') { <p>Pay in cash when your order arrives.</p> }
+          } @else {
+            <p class="muted">No payment method selected.</p>
+          }
+        </section>
+
+        <section class="block">
+          <div class="block-head">
+            <h2>Items ({{ itemCount() }})</h2>
+          </div>
+          <ul class="order-items">
+            @for (item of items(); track item.id) {
+              <li>
+                <img [src]="item.image" [alt]="item.name" />
+                <div>
+                  <strong>{{ item.name }}</strong>
+                  <small>{{ item.category }} · Qty {{ item.qty }}</small>
+                </div>
+                <span>{{ money(item.price * item.qty) }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+      </div>
+
+      <!-- RIGHT -->
+      <aside class="summary">
+        <h3>Order summary</h3>
+        <dl>
+          <div><dt>Price ({{ itemCount() }} {{ itemCount() === 1 ? 'item' : 'items' }})</dt><dd>{{ money(subtotal()) }}</dd></div>
+          @if (discount() > 0) {
+            <div class="green"><dt>Coupon discount</dt><dd>− {{ money(discount()) }}</dd></div>
+          }
+          <div><dt>Delivery charges</dt><dd>{{ delivery() === 0 ? 'Free' : money(delivery()) }}</dd></div>
+          @if (codFee() > 0) {
+            <div><dt>Payment handling fee</dt><dd>{{ money(codFee()) }}</dd></div>
+          }
+          <div class="total"><dt>Total amount</dt><dd>{{ money(total()) }}</dd></div>
+        </dl>
+
+        <button type="button" class="place-btn" (click)="placeOrder()" [disabled]="!canPlace()">
+          {{ placing() ? 'Placing order…' : 'Place order' }}
+        </button>
+        <button type="button" class="back-btn" (click)="previous.emit()">Back to payment</button>
+        <small class="terms">By placing your order you agree to our terms and privacy policy.</small>
+      </aside>
+    </div>
+  } @else {
+
+    <!-- SUCCESS -->
+    <section class="success">
+      <span class="tick">✓</span>
+      <h1>Order <em>placed!</em></h1>
+      <p class="lead">Thank you{{ address() ? ', ' + address()!.fullName : '' }}. We've received your order and our team will confirm delivery within one business day.</p>
+
+      @if (offline()) {
+        <p class="note">ℹ️ Server not connected – this order was not saved to the database yet.</p>
+      }
+
+      <div class="success-card">
+        <div><span>Order number</span><strong>#{{ orderNumber() }}</strong></div>
+        <div><span>Amount</span><strong>{{ money(receipt()?.total ?? 0) }}</strong></div>
+        <div><span>Payment</span><strong>{{ methodLabel(receipt()?.method) }}</strong></div>
+        @if (address(); as a) {
+          <div><span>Delivering to</span><strong>{{ a.city }}, {{ a.state }} – {{ a.zipCode }}</strong></div>
+        }
+      </div>
+
+      <button type="button" class="place-btn" (click)="finished.emit()">Continue shopping</button>
+    </section>
+  }
+</main>

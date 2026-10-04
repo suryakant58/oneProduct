@@ -2,16 +2,15 @@ import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { of } from 'rxjs';
-
 import { App } from './app';
-import { Member } from './services/member';
+// import { Member } from './services/member';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
-        { provide: Member, useValue: { getMembers: () => of([]) } },
+        // { provide: Member, useValue: { getMembers: () => of([]) } },
         provideHttpClient(),
       ],
     }).compileComponents();

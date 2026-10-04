@@ -1,3 +1,20 @@
+@if (isCartOpen()) {
+  @switch (checkoutStep()) {
+    @case ('cart') {
+      <app-view-cart [items]="cartItems()" [coupon]="appliedCoupon()" (couponChange)="appliedCoupon.set($event)" (qtyUp)="increaseItem($event)" (qtyDown)="decreaseItem($event)"
+        (removeItem)="removeItem($event)" (clearCart)="clearCart()" (previous)="closeCart()" (next)="openAddress()" />
+    }
+    @case ('address') {
+      <app-address [items]="cartItems()" (previous)="showCartStep()" (addressSelected)="selectedAddress.set($event)"
+        (next)="openPaymentSummary()" />
+    }
+    @case ('payment-summary') {
+      <app-payment-summary [items]="cartItems()" [coupon]="appliedCoupon()" [address]="selectedAddress()"
+        (previous)="openAddress()" (paymentSelected)="selectedPayment.set($event)" (next)="openPlaceOrder()" />
+    }
+    @case ('place-order') { <app-place-order (previous)="openPaymentSummary()" /> }
+  }
+} @else {
 @if (isQuickViewOpen()) {<div class="quick-view-backdrop" (click)="closeQuickView()">
   <section class="quick-view-modal" role="dialog" aria-modal="true" aria-label="Quick product view"
     (click)="$event.stopPropagation()"><button class="quick-view-close" (click)="closeQuickView()"
@@ -188,6 +205,73 @@
       max-width: 390px;
     }
 
+    /* ---- Product pager ( < and > ) ---- */
+    .product-pager {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .product-pager .product-grid {
+      flex: 1;
+      min-width: 0;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+      overflow: visible;
+    }
+
+    /* Remove the old arrow icons drawn by ::before / ::after on the grid */
+    #shop::before,
+    #shop::after,
+    .product-pager::before,
+    .product-pager::after,
+    .product-pager *::before,
+    .product-pager *::after {
+      content: none !important;
+      display: none !important;
+    }
+
+    .product-pager .product-image img {
+      width: 100% !important;
+      height: 220px !important;
+      object-fit: cover;
+      display: block;
+    }
+
+    .pager-btn {
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--forest);
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      position: static;
+      transform: none;
+    }
+
+    .pager-btn:hover:not(:disabled) {
+      background: var(--coral);
+      color: #fff;
+    }
+
+    .pager-btn:disabled {
+      opacity: .35;
+      cursor: not-allowed;
+    }
+
+    .page-indicator {
+      text-align: center;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font: 12px var(--sans);
+    }
+
     @media (max-width: 680px) {
       .profile-popover {
         right: 10px;
@@ -200,6 +284,15 @@
 
       .form-row {
         grid-template-columns: 1fr;
+      }
+
+      .product-pager .product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .pager-btn {
+        width: 36px;
+        height: 36px;
       }
     }
   </style>
@@ -219,7 +312,7 @@
               [class.active]="activeTheme() === theme" (click)="setTheme(theme)">{{theme}}</button>}</div>
         </div><button class="icon-button desktop-only" aria-label="Notifications">♧<i>2</i></button><button
           class="icon-button" aria-label="Wishlist">♡<i>{{wishlistCount()}}</i></button><button class="icon-button"
-          aria-label="Shopping bag">♧<i>{{cartCount()}}</i></button><button
+          aria-label="Shopping bag" (click)="openCart()">♧<i>{{cartCount()}}</i></button><button
           class="profile-button"><span>AM</span><b>⌄</b></button>
       </div>
     </div>
@@ -272,26 +365,39 @@
       <div class="category-pills">@for (category of ['All products','Single bottles','Case packs','Bulk orders']; track
         category) {<button [class.active]="selectedCategory() === category"
           (click)="chooseCategory(category)">{{category}}</button>}</div>
-<div class="product-grid">
-  @for (product of data; track product.id) {
-    <article class="product-card">
-      <div class="product-image">
-        <span class="product-tag">{{ product.category }}</span>
-        <button class="heart" type="button">♡</button>
-     <img [src]="getImage(product.image)" [alt]="product.name" loading="lazy">
-        <div class="quick-view" (click)="openQuickView()">Quick view <span>↗</span></div>
+
+      <div class="product-pager">
+        <button class="pager-btn" type="button" (click)="moveProductPage(-1)"
+          [disabled]="currentPage() === 0" aria-label="Previous products">&lt;</button>
+
+        <div class="product-grid">
+          @for (product of visibleProducts(); track product.id) {
+            <article class="product-card">
+              <div class="product-image">
+                <span class="product-tag">{{ product.category }}</span>
+                <button class="heart" type="button">♡</button>
+                <img [src]="getImage(product.image)" [alt]="product.name" loading="lazy">
+                <div class="quick-view" (click)="openQuickView()">Quick view <span>↗</span></div>
+              </div>
+              <div class="product-info">
+                <h3>{{ product.name }}</h3>
+                <p>₹{{ product.price }}</p>
+                <p>📍 {{ product.location }}</p>
+                <p>⭐ {{ product.rating }}</p>
+                <button class="button button-dark" type="button" (click)="addToCart(product)">Add to cart</button>
+              </div>
+            </article>
+          } @empty {
+            <div class="empty-state">No products found.</div>
+          }
+        </div>
+
+        <button class="pager-btn" type="button" (click)="moveProductPage(1)"
+          [disabled]="currentPage() >= pageCount() - 1" aria-label="Next products">&gt;</button>
       </div>
-      <div class="product-info">
-        <h3>{{ product.name }}</h3>
-        <p>₹{{ product.price }}</p>
-        <p>📍 {{ product.location }}</p>
-        <p>⭐ {{ product.rating }}</p>
-      </div>
-    </article>
-  } @empty {
-    <div class="empty-state">No products found.</div>
-  }
-</div>
+
+      <p class="page-indicator">Page {{ currentPage() + 1 }} / {{ pageCount() }}</p>
+
       <div class="center-link"><a href="#shop" class="text-link">View all products <span>→</span></a></div>
     </section>
     <section class="section container-xl" aria-labelledby="members-heading">
@@ -470,3 +576,4 @@
     <div class="notification-empty" [class.visible]="unreadNotifications() === 0">You're all caught up.</div>
   </aside>}
 </div>
+}

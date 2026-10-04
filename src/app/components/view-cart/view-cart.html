@@ -1,0 +1,107 @@
+<main class="checkout-step">
+  <ol class="stepper" aria-label="Checkout progress">
+    @for (step of steps; track step; let i = $index) {
+      <li [class.active]="i === 0">
+        <span class="step-num">{{ i + 1 }}</span>
+        <span class="step-name">{{ step }}</span>
+      </li>
+    }
+  </ol>
+
+  <div class="cart-head">
+    <h1>Your cart</h1>
+    <p class="cart-sub">
+      {{ count() }} {{ count() === 1 ? 'item' : 'items' }} ready for checkout
+    </p>
+  </div>
+
+  @if (items().length) {
+    <section class="cart-layout">
+      <!-- Items -->
+      <div class="cart-list">
+        @for (item of items(); track item.id) {
+          <article class="cart-item">
+            <img class="cart-thumb" [src]="item.image" [alt]="item.name" />
+
+            <div class="cart-info">
+              <span class="cart-tag">{{ item.category }}</span>
+              <h3>{{ item.name }}</h3>
+              <p class="cart-meta">📍 {{ item.location }}</p>
+              <p class="cart-unit">{{ money(item.price) }} each</p>
+            </div>
+
+            <div class="cart-controls">
+              <div class="qty" role="group" [attr.aria-label]="'Quantity for ' + item.name">
+                <button type="button" (click)="qtyDown.emit(item.id)" [disabled]="item.qty <= 1"
+                  aria-label="Decrease quantity">−</button>
+                <span>{{ item.qty }}</span>
+                <button type="button" (click)="qtyUp.emit(item.id)" aria-label="Increase quantity">+</button>
+              </div>
+
+              <strong class="cart-line">{{ money(item.price * item.qty) }}</strong>
+
+              <button type="button" class="cart-remove" (click)="removeItem.emit(item.id)"
+                [attr.aria-label]="'Remove ' + item.name">Remove</button>
+            </div>
+          </article>
+        }
+      </div>
+
+      <!-- Summary -->
+      <aside class="cart-summary">
+        <h2>Order summary</h2>
+
+        <div class="free-ship">
+          @if (freeDeliveryRemaining() > 0) {
+            <p>Add <strong>{{ money(freeDeliveryRemaining()) }}</strong> more for free delivery</p>
+          } @else {
+            <p>🎉 You've unlocked <strong>free delivery</strong></p>
+          }
+          <div class="bar"><span [style.width.%]="freeDeliveryProgress()"></span></div>
+        </div>
+
+        <div class="coupon">
+          <label for="coupon">Have a coupon?</label>
+          <div class="coupon-row">
+            <input id="coupon" type="text" placeholder="e.g. FRESH15" [value]="couponInput()"
+              (input)="couponInput.set($any($event.target).value)" (keyup.enter)="applyCoupon()" />
+            <button type="button" (click)="applyCoupon()">Apply</button>
+          </div>
+          @if (couponMessage()) {
+            <small [class.ok]="couponValid()" [class.bad]="!couponValid()">
+              {{ couponMessage() }}
+            </small>
+          }
+        </div>
+
+        <dl class="totals">
+          <div><dt>Subtotal</dt><dd>{{ money(subtotal()) }}</dd></div>
+          @if (discount() > 0) {
+            <div class="discount"><dt>Discount ({{ appliedCoupon() }})</dt><dd>− {{ money(discount()) }}</dd></div>
+          }
+          <div>
+            <dt>Delivery</dt>
+            <dd>{{ delivery() === 0 ? 'Free' : money(delivery()) }}</dd>
+          </div>
+          <div class="grand"><dt>Total</dt><dd>{{ money(total()) }}</dd></div>
+        </dl>
+
+        <button type="button" class="clear-cart" (click)="clearCart.emit()">Clear cart</button>
+      </aside>
+    </section>
+  } @else {
+    <section class="cart-empty">
+      <span class="empty-icon">🛒</span>
+      <h2>Your cart is empty</h2>
+      <p>Looks like you haven't added anything yet. Fresh picks are waiting for you.</p>
+      <button type="button" class="checkout-next" (click)="previous.emit()">Start shopping</button>
+    </section>
+  }
+
+  <footer class="checkout-actions">
+    <button class="checkout-previous" type="button" (click)="previous.emit()">Continue shopping</button>
+    <button class="checkout-next" type="button" (click)="next.emit()" [disabled]="!items().length">
+      Proceed to address
+    </button>
+  </footer>
+</main>
