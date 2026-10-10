@@ -1,29 +1,42 @@
-import { Component, HostListener, OnInit, computed, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { ProductService, ProductData } from './services/member';
 import { ViewCart, CartItem } from './components/view-cart/view-cart';
 import { Address, AddressData } from './components/address/address';
 import { PaymentSummary, PaymentData } from './components/payment-summary/payment-summary';
 import { PlaceOrder } from './components/place-order/place-order';
+import { OrderTracking } from './components/order-tracking/order-tracking';
+import { MyOrders, ProductInfo } from './components/my-orders/my-orders';
 
 @Component({
   selector: 'app-root',
-  imports: [ViewCart, Address, PaymentSummary, PlaceOrder],
+  imports: [ViewCart, Address, PaymentSummary, PlaceOrder, OrderTracking, MyOrders],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
   // ---------- API data ----------
   private readonly apiBase = 'https://localhost:7181';
   protected readonly data = signal<ProductData[]>([]);
 
   constructor(private productService: ProductService) {}
 
-  ngOnInit(): void {
-    this.productService.getProducts().subscribe({
-      next: (res: ProductData[]) => this.data.set(res),
-      error: (err: any) => console.error('API error', err)
-    });
-  }
+ ngOnInit(): void {
+  this.startPromo();
+
+  this.productService.getProducts().subscribe({
+    next: (res: ProductData[]) => {
+      console.log('Products from API:', res);
+
+      const products = res.map((p: any) => ({
+        ...p,
+        quantity: Number(p.quantity ?? p.Quantity ?? 0)
+      }));
+
+      this.data.set(products);
+    },
+    error: (err: any) => console.error('API error', err)
+  });
+}
 
   getImage(path: string): string {
     if (!path) return '';
@@ -36,6 +49,18 @@ export class App implements OnInit {
   protected readonly cartItems = signal<CartItem[]>([]);
   protected readonly selectedAddress = signal<AddressData | null>(null);
   protected readonly appliedCoupon = signal('');
+  protected readonly isTrackingOpen = signal(false);
+  protected readonly trackOrderId = signal<number | null>(null);
+  protected readonly isMyOrdersOpen = signal(false);
+
+  // product id -> name + image, so "My orders" can show product names and pictures
+  protected readonly productInfo = computed(() => {
+    const map: Record<string, ProductInfo> = {};
+    for (const p of this.data()) {
+      map[String(p.id)] = { name: p.name, image: this.getImage(p.image) };
+    }
+    return map;
+  });
   protected readonly selectedPayment = signal<PaymentData | null>(null);
   protected readonly cartCount = computed(() =>
     this.cartItems().reduce((n, i) => n + i.qty, 0)
@@ -138,27 +163,123 @@ export class App implements OnInit {
   }
 
   // ---------- Cart / checkout ----------
-  protected addToCart(product: ProductData): void {
-    this.cartItems.update((list) => {
-      const existing = list.find((i) => i.id === product.id);
-      if (existing) {
-        return list.map((i) => (i.id === product.id ? { ...i, qty: i.qty + 1 } : i));
-      }
-      return [
-        ...list,
-        {
-          id: product.id,
-          name: product.name,
-          price: Number(product.price),
-          image: this.getImage(product.image),
-          category: product.category,
-          location: product.location,
-          qty: 1
-        }
-      ];
-    });
-    this.openCart(); // go straight to the "Your cart" page
+  // ---------- Festive sale popup ----------
+  protected readonly promoCode = 'COCOFEST20';
+  protected readonly promoTotal = 8.5; // seconds before it closes by itself
+  protected readonly isPromoOpen = signal(false);
+  protected readonly promoSeconds = signal(8.5);
+  protected readonly couponCopied = signal(false);
+  private promoTimer: number | undefined;
+  private readonly promoSeenKey = 'oneProduct-promo-seen';
+
+  ngOnDestroy(): void {
+    if (this.promoTimer !== undefined) window.clearInterval(this.promoTimer);
   }
+
+  private startPromo(): void {
+    try {
+      if (sessionStorage.getItem(this.promoSeenKey)) return; // show once per visit
+    } catch {
+      /* ignore */
+    }
+    window.setTimeout(() => {
+      this.promoSeconds.set(this.promoTotal);
+      this.isPromoOpen.set(true);
+      this.promoTimer = window.setInterval(() => {
+        const left = Math.round((this.promoSeconds() - 0.1) * 10) / 10;
+        if (left <= 0) this.closePromo();
+        else this.promoSeconds.set(left);
+      }, 100);
+    }, 800);
+  }
+
+  protected closePromo(): void {
+    if (this.promoTimer !== undefined) {
+      window.clearInterval(this.promoTimer);
+      this.promoTimer = undefined;
+    }
+    this.isPromoOpen.set(false);
+    try {
+      sessionStorage.setItem(this.promoSeenKey, '1');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  protected shopNow(): void {
+    this.closePromo();
+    this.chooseCategory('All products');
+    // go to the product list, where each product has "Add to cart"
+    window.setTimeout(
+      () => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      50
+    );
+  }
+  protected copyCoupon(): void {
+    void navigator.clipboard?.writeText(this.promoCode);
+    this.couponCopied.set(true);
+    window.setTimeout(() => this.couponCopied.set(false), 2000);
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    if (this.isPromoOpen()) this.closePromo();
+  }
+
+  // ---------- Stock ----------
+  // TEMPORARY demo: these product names show as "Out of stock" when the API has no stock field.
+  // Delete this list once your API returns stock (see isOutOfStock below).
+
+
+  
+protected isOutOfStock(product: ProductData): boolean {
+  return Number(product.quantity ?? 0) <= 0;
+}
+
+protected addToCart(product: ProductData): void {
+  if (this.isOutOfStock(product)) {
+    this.toast.set(`${product.name} is out of stock.`);
+    window.setTimeout(() => this.toast.set(''), 2500);
+    return;
+  }
+
+  this.cartItems.update((list) => {
+    const existing = list.find((i) => i.id === product.id);
+
+    // Don't allow more items than the available stock.
+    const availableStock = Number(product.quantity);
+
+    if (existing) {
+      if (existing.qty >= availableStock) {
+        this.toast.set(`Only ${availableStock} available in stock.`);
+        window.setTimeout(() => this.toast.set(''), 2500);
+        return list;
+      }
+
+      return list.map((i) =>
+        i.id === product.id ? { ...i, qty: i.qty + 1 } : i
+      );
+    }
+
+    return [
+      ...list,
+      {
+        id: product.id,
+        name: product.name,
+        price: Number(product.price),
+        image: this.getImage(product.image),
+        category: product.category,
+        location: product.location,
+        qty: 1
+      }
+    ];
+  });
+
+  if (!this.isOutOfStock(product)) {
+    this.openCart();
+  }
+}
+
   protected increaseItem(id: CartItem['id']): void {
     this.cartItems.update((list) => list.map((i) => (i.id === id ? { ...i, qty: i.qty + 1 } : i)));
   }
@@ -169,6 +290,43 @@ export class App implements OnInit {
   }
   protected removeItem(id: CartItem['id']): void {
     this.cartItems.update((list) => list.filter((i) => i.id !== id));
+  }
+  protected openTracking(event?: Event): void {
+    event?.preventDefault();
+    this.trackOrderId.set(null);
+    this.isAssistantOpen.set(false);
+    this.isTrackingOpen.set(true);
+    window.scrollTo({ top: 0 });
+  }
+  protected closeTracking(): void { this.isTrackingOpen.set(false); }
+  protected openMyOrders(): void {
+    this.isProfileOpen.set(false);
+    this.isTrackingOpen.set(false);
+    this.isMyOrdersOpen.set(true);
+    window.scrollTo({ top: 0 });
+  }
+  protected closeMyOrders(): void { this.isMyOrdersOpen.set(false); }
+  protected trackFromMyOrders(orderId: number): void {
+    this.isMyOrdersOpen.set(false);
+    this.trackOrderId.set(orderId);
+    this.isTrackingOpen.set(true);
+    window.scrollTo({ top: 0 });
+  }
+  protected trackOrder(orderNumber: string): void {
+    this.finishOrder();                       // clear the cart and leave checkout
+    this.trackOrderId.set(Number(orderNumber) || null);
+    this.isTrackingOpen.set(true);
+    window.scrollTo({ top: 0 });
+  }
+  protected finishOrder(): void {
+    this.cartItems.set([]);
+    this.appliedCoupon.set('');
+    this.selectedPayment.set(null);
+    this.isCartOpen.set(false);
+    this.checkoutStep.set('cart');
+    this.toast.set('Thank you! Your order has been placed.');
+    window.setTimeout(() => this.toast.set(''), 3500);
+    window.scrollTo({ top: 0 });
   }
   protected clearCart(): void { this.cartItems.set([]); this.appliedCoupon.set(''); }
   protected openCart(): void {

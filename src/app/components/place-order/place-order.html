@@ -20,6 +20,10 @@
       </p>
     }
 
+    @if (error()) {
+      <p class="alert" role="alert">{{ error() }}</p>
+    }
+
     <div class="order-layout">
       <!-- LEFT -->
       <div class="order-main">
@@ -115,6 +119,9 @@
         }
       </div>
 
+      @if (!offline()) {
+        <button type="button" class="back-btn" (click)="trackOrder.emit(orderNumber())">Track my order</button>
+      }
       <button type="button" class="place-btn" (click)="finished.emit()">Continue shopping</button>
     </section>
   }

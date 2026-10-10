@@ -12,8 +12,16 @@
       <app-payment-summary [items]="cartItems()" [coupon]="appliedCoupon()" [address]="selectedAddress()"
         (previous)="openAddress()" (paymentSelected)="selectedPayment.set($event)" (next)="openPlaceOrder()" />
     }
-    @case ('place-order') { <app-place-order (previous)="openPaymentSummary()" /> }
+    @case ('place-order') {
+      <app-place-order [items]="cartItems()" [coupon]="appliedCoupon()" [address]="selectedAddress()"
+        [payment]="selectedPayment()" (previous)="openPaymentSummary()" (changeAddress)="openAddress()"
+        (finished)="finishOrder()" (trackOrder)="trackOrder($event)" />
+    }
   }
+} @else if (isMyOrdersOpen()) {
+  <app-my-orders [products]="productInfo()" (back)="closeMyOrders()" (track)="trackFromMyOrders($event)" />
+} @else if (isTrackingOpen()) {
+  <app-order-tracking [orderId]="trackOrderId()" (back)="closeTracking()" />
 } @else {
 @if (isQuickViewOpen()) {<div class="quick-view-backdrop" (click)="closeQuickView()">
   <section class="quick-view-modal" role="dialog" aria-modal="true" aria-label="Quick product view"
@@ -31,6 +39,29 @@
     <p class="quick-view-count">{{quickViewIndex() + 1}} / {{quickViewImages().length}} coconut juice images</p>
   </section>
 </div>}
+@if (isPromoOpen()) {
+<div class="promo-backdrop" (click)="closePromo()">
+  <section class="promo-modal" role="dialog" aria-modal="true" aria-label="Festive sale offer"
+    (click)="$event.stopPropagation()">
+    <button type="button" class="promo-close" (click)="closePromo()" aria-label="Close offer">×</button>
+
+    <div class="promo-logo"><span class="promo-mark">◒</span><span><strong>Coco</strong><small>REPUBLIC</small></span></div>
+
+    <h2><span class="gold">Festive sale: 20%</span><br>off all products!</h2>
+
+    <button type="button" class="promo-coupon" (click)="copyCoupon()" title="Click to copy">
+      Coupon code: <strong>{{ promoCode }}</strong>
+      <small>{{ couponCopied() ? '✓ Copied' : 'Tap to copy' }}</small>
+    </button>
+
+    <p class="promo-timer">Autoclose in {{ promoSeconds().toFixed(1) }} seconds</p>
+
+    <button type="button" class="promo-btn" (click)="shopNow()">Shop now</button>
+
+    <div class="promo-bar"><span [style.width.%]="(promoSeconds() / promoTotal) * 100"></span></div>
+  </section>
+</div>
+}
 <div class="app-shell">
   <style>
     .app-shell {
@@ -205,6 +236,203 @@
       max-width: 390px;
     }
 
+    /* ---- Festive sale popup ---- */
+    .promo-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(10, 22, 16, .55);
+      animation: promoFade .25s ease;
+    }
+
+    .promo-modal {
+      position: relative;
+      width: min(360px, 100%);
+      padding: 34px 26px 30px;
+      overflow: hidden;
+      text-align: center;
+      color: #fff;
+      background: var(--forest, #18392d);
+      box-shadow: 0 25px 80px #0006;
+      animation: promoPop .3s ease;
+    }
+
+    .promo-close {
+      position: absolute;
+      top: 8px;
+      right: 14px;
+      border: 0;
+      background: transparent;
+      color: #fff;
+      font-size: 30px;
+      line-height: 1;
+      cursor: pointer;
+      opacity: .85;
+    }
+
+    .promo-close:hover {
+      opacity: 1;
+    }
+
+    .promo-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      text-align: left;
+      line-height: 1.1;
+    }
+
+    .promo-logo strong {
+      display: block;
+      font: 700 20px var(--display);
+    }
+
+    .promo-logo small {
+      font: 600 8px var(--sans);
+      letter-spacing: .2em;
+    }
+
+    .promo-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--lime, #dff27a);
+      color: var(--forest, #18392d);
+      font-size: 20px;
+    }
+
+    .promo-modal h2 {
+      margin: 0 0 14px;
+      color: #fff;
+      font: 700 32px/1.1 var(--display);
+      text-transform: uppercase;
+    }
+
+    .promo-modal h2 .gold {
+      color: #e6c36a;
+    }
+
+    .promo-coupon {
+      display: inline-grid;
+      gap: 2px;
+      margin: 0 0 12px;
+      padding: 8px 16px;
+      border: 1px dashed rgba(255, 255, 255, .6);
+      background: transparent;
+      color: #fff;
+      font: 600 13px var(--sans);
+      cursor: pointer;
+    }
+
+    .promo-coupon strong {
+      color: var(--lime, #dff27a);
+      font-size: 15px;
+      letter-spacing: .04em;
+    }
+
+    .promo-coupon small {
+      font: 400 10px var(--sans);
+      opacity: .7;
+    }
+
+    .promo-timer {
+      margin: 0 0 16px;
+      font: 12px var(--sans);
+      opacity: .9;
+    }
+
+    .promo-btn {
+      padding: 12px 30px;
+      border: 0;
+      background: #fff;
+      color: var(--forest, #18392d);
+      font: 700 12px var(--sans);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      cursor: pointer;
+    }
+
+    .promo-btn:hover {
+      background: var(--lime, #dff27a);
+    }
+
+    .promo-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 4px;
+      background: rgba(255, 255, 255, .15);
+    }
+
+    .promo-bar span {
+      display: block;
+      height: 100%;
+      background: var(--lime, #dff27a);
+      transition: width .1s linear;
+    }
+
+    @keyframes promoFade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes promoPop {
+      from { opacity: 0; transform: translateY(16px) scale(.96); }
+      to { opacity: 1; transform: none; }
+    }
+
+    /* ---- Out of stock (Flipkart style) ---- */
+    .product-card .product-image {
+      position: relative;
+    }
+
+    .product-card.out-of-stock .product-image img {
+      filter: grayscale(1);
+      opacity: .55;
+    }
+
+    .product-card.out-of-stock .product-info h3,
+    .product-card.out-of-stock .product-info p:not(.oos-text) {
+      opacity: .6;
+    }
+
+    .oos-band {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 3;
+      padding: 8px 0;
+      text-align: center;
+      background: #d32f2f;
+      color: #fff;
+      font: 700 13px var(--sans);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      pointer-events: none;
+    }
+
+    .oos-text {
+      margin: 6px 0 !important;
+      color: #d32f2f;
+      font: 700 12px var(--sans);
+    }
+
+    .oos-btn {
+      background: #e0e0e0 !important;
+      color: #8a8a8a !important;
+      border: 0 !important;
+      cursor: not-allowed !important;
+    }
+
     /* ---- Product pager ( < and > ) ---- */
     .product-pager {
       display: flex;
@@ -372,11 +600,14 @@
 
         <div class="product-grid">
           @for (product of visibleProducts(); track product.id) {
-            <article class="product-card">
+            <article class="product-card" [class.out-of-stock]="isOutOfStock(product)">
               <div class="product-image">
                 <span class="product-tag">{{ product.category }}</span>
                 <button class="heart" type="button">♡</button>
                 <img [src]="getImage(product.image)" [alt]="product.name" loading="lazy">
+                @if (isOutOfStock(product)) {
+                  <div class="oos-band">Out of stock</div>
+                }
                 <div class="quick-view" (click)="openQuickView()">Quick view <span>↗</span></div>
               </div>
               <div class="product-info">
@@ -384,7 +615,12 @@
                 <p>₹{{ product.price }}</p>
                 <p>📍 {{ product.location }}</p>
                 <p>⭐ {{ product.rating }}</p>
-                <button class="button button-dark" type="button" (click)="addToCart(product)">Add to cart</button>
+                @if (isOutOfStock(product)) {
+                  <p class="oos-text">Currently unavailable</p>
+                  <button class="button oos-btn" type="button" disabled>Out of stock</button>
+                } @else {
+                  <button class="button button-dark" type="button" (click)="addToCart(product)">Add to cart</button>
+                }
               </div>
             </article>
           } @empty {
@@ -478,7 +714,7 @@
       </div>
       <div>
         <h4>Need help?</h4><a href="#top">Contact us</a><a href="#top">Delivery & returns</a><a href="#top">FAQs</a><a
-          href="#top">Track my order</a>
+          href="#top" (click)="openTracking($event)">Track my order</a>
       </div>
       <div>
         <h4>Follow along</h4>
@@ -501,7 +737,7 @@
         <p>Hi there! I’m Sam, your Coco Republic guide. How can I make your day a little fresher?</p>
       </div>
       <p class="suggestion-label">Try asking me about</p>
-      <div class="suggestions"><button>Track my order</button><button>Current offers</button><button>Bulk
+      <div class="suggestions"><button (click)="openTracking()">Track my order</button><button>Current offers</button><button>Bulk
           pricing</button><button>Product info</button></div>
     </div>
     <div class="sam-input"><input placeholder="Write a message..." aria-label="Chat message"><button>↑</button></div>
@@ -529,7 +765,7 @@
         [attr.aria-label]="'Show gallery image ' + ($index + 1)"><img [src]="image" alt=""></button>}</div>
   </section>
   @if (isProfileOpen()) {<div class="profile-popover is-open"><strong>Hi, Amara</strong><small>Customer
-      account</small><button (click)="openOrderForm()">＋ New order</button><button>♡ Wishlist
+      account</small><button (click)="openOrderForm()">＋ New order</button><button (click)="openMyOrders()">📦 My orders</button><button>♡ Wishlist
       <span>{{wishlistCount()}}</span></button><button>⚙ Account settings</button><button class="sign-out">Sign
       out</button></div>}
   @if (isOrderFormOpen()) {<div class="modal-backdrop" (click)="closeOrderForm()">

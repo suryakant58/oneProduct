@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { CartItem } from '../view-cart/view-cart';
 import { AddressData } from '../address/address';
 import { PaymentData } from '../payment-summary/payment-summary';
@@ -9,8 +9,7 @@ const USER_ID = 1; // TODO: replace with the logged-in user's id
 const FREE_DELIVERY_AT = 499;
 const DELIVERY_FEE = 49;
 const COD_FEE = 20;
-const COUPON_CODE = 'FRESH15';
-const COUPON_PERCENT = 15;
+const COUPONS: Record<string, number> = { FRESH15: 15, COCOFEST20: 20 }; // code -> % off
 
 @Component({
   selector: 'app-place-order',
@@ -29,6 +28,7 @@ export class PlaceOrder {
   readonly previous = output<void>();
   readonly changeAddress = output<void>();
   readonly finished = output<void>();
+  readonly trackOrder = output<string>();
 
   protected readonly steps = ['Cart', 'Address', 'Payment', 'Place order'];
   protected readonly placing = signal(false);
@@ -46,7 +46,7 @@ export class PlaceOrder {
     this.items().reduce((sum, i) => sum + i.price * i.qty, 0)
   );
   protected readonly discount = computed(() =>
-    this.coupon() === COUPON_CODE ? Math.round((this.subtotal() * COUPON_PERCENT) / 100) : 0
+    Math.round((this.subtotal() * (COUPONS[this.coupon()] ?? 0)) / 100)
   );
   protected readonly delivery = computed(() =>
     this.subtotal() === 0 || this.subtotal() >= FREE_DELIVERY_AT ? 0 : DELIVERY_FEE
@@ -93,10 +93,19 @@ export class PlaceOrder {
 
     this.http.post<{ orderId: number }>(API, body).subscribe({
       next: (res) => this.success(String(res.orderId), receipt),
-      error: () => {
-        // API not available yet -> still show the confirmation so the flow can be tested
-        this.offline.set(true);
-        this.success('CR' + Date.now().toString().slice(-8), receipt);
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 0) {
+          // Server cannot be reached at all -> demo mode so the flow can still be tested
+          this.offline.set(true);
+          this.success('CR' + Date.now().toString().slice(-8), receipt);
+        } else {
+          // Server answered with an error (400/404/500): the order was NOT saved
+          this.placing.set(false);
+          this.error.set(
+            `The order could not be saved (server error ${err.status}). ` +
+            `Please check the API output window and try again.`
+          );
+        }
       }
     });
   }

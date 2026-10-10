@@ -15,8 +15,7 @@ export interface PaymentData {
 const FREE_DELIVERY_AT = 499;
 const DELIVERY_FEE = 49;
 const COD_FEE = 20;
-const COUPON_CODE = 'FRESH15';
-const COUPON_PERCENT = 15;
+const COUPONS: Record<string, number> = { FRESH15: 15, COCOFEST20: 20 }; // code -> % off
 
 @Component({
   selector: 'app-payment-summary',
@@ -48,7 +47,7 @@ export class PaymentSummary {
     this.items().reduce((sum, i) => sum + i.price * i.qty, 0)
   );
   protected readonly discount = computed(() =>
-    this.coupon() === COUPON_CODE ? Math.round((this.subtotal() * COUPON_PERCENT) / 100) : 0
+    Math.round((this.subtotal() * (COUPONS[this.coupon()] ?? 0)) / 100)
   );
   protected readonly delivery = computed(() =>
     this.subtotal() === 0 || this.subtotal() >= FREE_DELIVERY_AT ? 0 : DELIVERY_FEE

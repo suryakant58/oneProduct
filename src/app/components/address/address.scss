@@ -275,6 +275,38 @@ h2 {
   }
 }
 
+/* ---------- Delete icon ---------- */
+.address-card .address-body {
+  padding-right: 32px;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line, #dfe3da);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--muted, #8a8f87);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+
+  &:hover:not(:disabled) {
+    color: #c62828;
+    border-color: #c62828;
+    background: #fdecea;
+  }
+
+  &:disabled {
+    opacity: .4;
+    cursor: wait;
+  }
+}
+
 /* ---------- Form ---------- */
 .address-form {
   display: grid;

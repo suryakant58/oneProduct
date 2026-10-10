@@ -1,0 +1,120 @@
+<main class="orders-page">
+  <div class="orders-head">
+    <button type="button" class="back-link" (click)="back.emit()">← Back to shop</button>
+    <h1>My orders</h1>
+    <p>Everything you've ordered, with its status, items and delivery details.</p>
+  </div>
+
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted">Loading your orders…</p>
+  } @else if (orderCount() === 0 && !error()) {
+    <section class="empty">
+      <span>🛍️</span>
+      <h2>No orders yet</h2>
+      <p>When you place an order, it will show up here.</p>
+      <button type="button" class="primary-btn" (click)="back.emit()">Start shopping</button>
+    </section>
+  } @else {
+    <div class="order-list">
+      @for (o of orders(); track o.orderId) {
+        <article class="order" [class.open]="openId() === o.orderId">
+
+          <!-- Summary row -->
+          <header class="order-top">
+            <div>
+              <span class="label">Order</span>
+              <strong class="order-no">#{{ o.orderId }}</strong>
+            </div>
+            <div>
+              <span class="label">Placed on</span>
+              <strong>{{ when(o.orderDate) }}</strong>
+            </div>
+            <div>
+              <span class="label">Total</span>
+              <strong>{{ money(o.totalAmount) }}</strong>
+            </div>
+            <span class="badge" [class.delivered]="o.orderStatus === 'Delivered'">{{ o.orderStatus }}</span>
+          </header>
+
+          <!-- Item preview -->
+          <div class="preview">
+            @for (it of o.items.slice(0, 4); track $index) {
+              <div class="thumb" [title]="nameOf(it.productId)">
+                @if (imageOf(it.productId)) { <img [src]="imageOf(it.productId)" [alt]="nameOf(it.productId)" /> }
+                @else { <span>📦</span> }
+              </div>
+            }
+            @if (o.items.length > 4) { <div class="thumb more">+{{ o.items.length - 4 }}</div> }
+            <span class="preview-text">{{ itemCount(o) }} {{ itemCount(o) === 1 ? 'item' : 'items' }}</span>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="ghost-btn" (click)="toggle(o.orderId)">
+              {{ openId() === o.orderId ? 'Hide details ▴' : 'View details ▾' }}
+            </button>
+            <button type="button" class="primary-btn" (click)="track.emit(o.orderId)">Track order</button>
+          </div>
+
+          <!-- Details -->
+          @if (openId() === o.orderId) {
+            <div class="details">
+
+              <section>
+                <h3>Items</h3>
+                <ul class="lines">
+                  @for (it of o.items; track $index) {
+                    <li>
+                      <div class="thumb">
+                        @if (imageOf(it.productId)) { <img [src]="imageOf(it.productId)" [alt]="nameOf(it.productId)" /> }
+                        @else { <span>📦</span> }
+                      </div>
+                      <div class="line-info">
+                        <strong>{{ nameOf(it.productId) }}</strong>
+                        <small>{{ money(it.unitPrice) }} × {{ it.quantity }}</small>
+                      </div>
+                      <span class="line-total">{{ money(it.totalPrice) }}</span>
+                    </li>
+                  }
+                </ul>
+              </section>
+
+              <div class="two-col">
+                <section>
+                  <h3>Delivery address</h3>
+                  <strong>{{ o.fullName }}</strong>
+                  <p>{{ o.addressLine1 }}@if (o.addressLine2) {, {{ o.addressLine2 }}}</p>
+                  <p>{{ o.city }}, {{ o.state }} – {{ o.zipCode }}</p>
+                  <p>{{ o.country }}</p>
+                  <p>📞 {{ o.phoneNumber }}</p>
+                </section>
+
+                <section>
+                  <h3>Payment</h3>
+                  <p><strong>{{ methodLabel(o.paymentMethod) }}</strong></p>
+                  <p>
+                    Status:
+                    <span class="pay" [class.paid]="o.paymentStatus === 'Paid'">{{ o.paymentStatus }}</span>
+                  </p>
+
+                  <h3 class="mt">Price details</h3>
+                  <dl>
+                    <div><dt>Items total</dt><dd>{{ money(itemsTotal(o)) }}</dd></div>
+                    @if (discount(o) > 0) {
+                      <div class="green"><dt>Discount</dt><dd>− {{ money(discount(o)) }}</dd></div>
+                    }
+                    <div><dt>Delivery &amp; fees</dt><dd>{{ o.shippingCharge === 0 ? 'Free' : money(o.shippingCharge) }}</dd></div>
+                    <div class="grand"><dt>Total</dt><dd>{{ money(o.totalAmount) }}</dd></div>
+                  </dl>
+                </section>
+              </div>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</main>

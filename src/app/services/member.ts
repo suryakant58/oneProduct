@@ -10,6 +10,7 @@ export interface ProductData {
   location: string;
   image: string;
   rating: number;
+  quantity: number;
 }
 
 @Injectable({

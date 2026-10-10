@@ -12,8 +12,7 @@ export interface CartItem {
 
 const FREE_DELIVERY_AT = 499;
 const DELIVERY_FEE = 49;
-const COUPON_CODE = 'FRESH15';
-const COUPON_PERCENT = 15;
+const COUPONS: Record<string, number> = { FRESH15: 15, COCOFEST20: 20 }; // code -> % off
 
 @Component({
   selector: 'app-view-cart',
@@ -47,9 +46,7 @@ export class ViewCart {
     this.items().reduce((sum, i) => sum + i.price * i.qty, 0)
   );
   protected readonly discount = computed(() =>
-    this.appliedCoupon() === COUPON_CODE
-      ? Math.round((this.subtotal() * COUPON_PERCENT) / 100)
-      : 0
+    Math.round((this.subtotal() * (COUPONS[this.appliedCoupon()] ?? 0)) / 100)
   );
   protected readonly delivery = computed(() =>
     this.subtotal() === 0 || this.subtotal() >= FREE_DELIVERY_AT ? 0 : DELIVERY_FEE
@@ -72,10 +69,10 @@ export class ViewCart {
     if (!value) {
       this.couponValid.set(false);
       this.couponMessage.set('Enter a coupon code.');
-    } else if (value === COUPON_CODE) {
-      this.couponChange.emit(COUPON_CODE);
+    } else if (COUPONS[value]) {
+      this.couponChange.emit(value);
       this.couponValid.set(true);
-      this.couponMessage.set(`${COUPON_CODE} applied – ${COUPON_PERCENT}% off`);
+      this.couponMessage.set(`${value} applied – ${COUPONS[value]}% off`);
     } else {
       this.couponChange.emit('');
       this.couponValid.set(false);

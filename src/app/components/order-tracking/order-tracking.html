@@ -1,0 +1,80 @@
+<main class="track-page">
+  <div class="track-head">
+    <button type="button" class="back-link" (click)="back.emit()">← Back to shop</button>
+    <h1>Track your order</h1>
+    <p>See where your order is, from the moment you placed it to your doorstep.</p>
+  </div>
+
+  @if (error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading() && !tracking()) {
+    <p class="muted">Loading your orders…</p>
+  } @else if (orders().length === 0 && !error()) {
+    <section class="empty">
+      <span>📦</span>
+      <h2>No orders yet</h2>
+      <p>When you place an order, you can follow it here.</p>
+      <button type="button" class="primary-btn" (click)="back.emit()">Start shopping</button>
+    </section>
+  } @else if (tracking(); as t) {
+
+    <!-- Order summary -->
+    <section class="order-card">
+      <div class="order-top">
+        <div>
+          <span class="label">Order</span>
+          <strong class="order-no">#{{ t.orderId }}</strong>
+        </div>
+
+        @if (orders().length > 1) {
+          <label class="pick">Choose order
+            <select (change)="onPick($event)">
+              @for (o of orders(); track o.orderId) {
+                <option [value]="o.orderId" [selected]="o.orderId === selectedId()">
+                  #{{ o.orderId }} · {{ when(o.orderDate) }}
+                </option>
+              }
+            </select>
+          </label>
+        }
+
+        <button type="button" class="refresh-btn" (click)="refresh()" [disabled]="loading()">
+          {{ loading() ? 'Refreshing…' : '↻ Refresh' }}
+        </button>
+      </div>
+
+      <div class="order-meta">
+        <div><span class="label">Placed on</span><strong>{{ when(t.orderDate) }}</strong></div>
+        <div><span class="label">Total</span><strong>{{ money(t.totalAmount) }}</strong></div>
+        <div><span class="label">Status</span><strong class="badge" [class.delivered]="t.orderStatus === 'Delivered'">{{ t.orderStatus }}</strong></div>
+      </div>
+
+      <div class="progress" role="progressbar" [attr.aria-valuenow]="progress()" aria-valuemin="0" aria-valuemax="100">
+        <span [style.width.%]="progress()"></span>
+      </div>
+      <small class="progress-text">{{ progress() }}% complete</small>
+    </section>
+
+    <!-- Timeline -->
+    <section class="timeline-card">
+      <ol class="timeline">
+        @for (s of steps; track s.status; let i = $index) {
+          <li [class]="stateOf(i)">
+            <span class="dot">
+              @if (stateOf(i) === 'done') { ✓ } @else { {{ i + 1 }} }
+            </span>
+            <div class="step-body">
+              <strong>{{ s.status }}</strong>
+              <p>{{ s.text }}</p>
+              @if (dateOf(s.status); as d) {
+                <small>{{ when(d) }}</small>
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    </section>
+  }
+</main>

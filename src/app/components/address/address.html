@@ -37,6 +37,14 @@
                 <label class="address-card" [class.selected]="selectedId() === a.addressId">
                   <input type="radio" name="address" [checked]="selectedId() === a.addressId"
                     (change)="selectedId.set(a.addressId ?? null)" />
+                  <button type="button" class="delete-btn" title="Delete address" aria-label="Delete address"
+                    [disabled]="deletingId() === a.addressId" (click)="deleteAddress(a, $event)">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" />
+                      <path d="M10 11v6" /><path d="M14 11v6" />
+                    </svg>
+                  </button>
                   <div class="address-body">
                     <div class="address-top">
                       <strong>{{ a.fullName }}</strong>
@@ -46,6 +54,7 @@
                     <p>{{ a.city }}, {{ a.state }} – {{ a.zipCode }}</p>
                     <p>{{ a.country }}</p>
                     <p class="phone">📞 {{ a.phoneNumber }}</p>
+                    @if (a.email) { <p>✉️ {{ a.email }}</p> }
                   </div>
                 </label>
               }
@@ -72,6 +81,11 @@
                 @if (invalid('phoneNumber')) { <small class="err">Enter a valid 10-digit mobile number.</small> }
               </label>
             </div>
+
+            <label>Email <em>(for your order confirmation)</em>
+              <input type="email" formControlName="email" placeholder="you@example.com" autocomplete="email" />
+              @if (invalid('email')) { <small class="err">Enter a valid email address.</small> }
+            </label>
 
             <label>Address line 1
               <input type="text" formControlName="addressLine1" placeholder="House no., building, street"

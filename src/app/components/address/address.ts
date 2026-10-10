@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CartItem } from '../view-cart/view-cart';
 
@@ -11,6 +11,7 @@ export interface AddressData {
   phoneNumber: string;
   addressLine1: string;
   addressLine2: string | null;
+  email?: string | null;
   city: string;
   state: string;
   country: string;
@@ -57,6 +58,7 @@ export class Address implements OnInit {
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly error = signal('');
+  protected readonly deletingId = signal<number | null>(null);
   /** true when the API is not reachable and addresses are kept on this device only */
   protected readonly offline = signal(false);
 
@@ -72,6 +74,7 @@ export class Address implements OnInit {
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
     phoneNumber: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
+    email: ['', [Validators.required, Validators.email]],
     addressLine1: ['', [Validators.required, Validators.maxLength(200)]],
     addressLine2: ['', [Validators.maxLength(200)]],
     city: ['', [Validators.required, Validators.maxLength(100)]],
@@ -84,10 +87,15 @@ export class Address implements OnInit {
   ngOnInit(): void {
     this.http.get<AddressData[]>(`${API}/user/${USER_ID}`).subscribe({
       next: (list) => this.showList(list),
-      error: () => {
-        // API not available yet -> fall back to addresses saved on this device
-        this.offline.set(true);
-        this.showList(this.readLocal());
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 0) {
+          // Server cannot be reached -> use addresses saved on this device
+          this.offline.set(true);
+          this.showList(this.readLocal());
+        } else {
+          this.error.set(`Could not load addresses (server error ${err.status}).`);
+          this.showList([]);
+        }
       }
     });
   }
@@ -118,13 +126,56 @@ export class Address implements OnInit {
 
     this.http.post<AddressData>(API, body).subscribe({
       next: (saved) => this.afterSave(saved),
-      error: () => {
-        // API not available -> keep the address on this device so the UI still works
-        this.offline.set(true);
-        this.afterSave({ ...body, addressId: Date.now() });
-        this.writeLocal(this.addresses());
+      error: (err: HttpErrorResponse) => {
+        if (err.status === 0) {
+          // Server cannot be reached -> keep the address on this device
+          this.offline.set(true);
+          this.afterSave({ ...body, addressId: Date.now() });
+          this.writeLocal(this.addresses());
+        } else {
+          this.saving.set(false);
+          this.error.set(`The address could not be saved (server error ${err.status}).`);
+        }
       }
     });
+  }
+
+  protected deleteAddress(a: AddressData, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const id = a.addressId;
+    if (id == null) return;
+    if (!window.confirm(`Delete the address for ${a.fullName} (${a.addressLine1})?`)) return;
+
+    this.deletingId.set(id);
+    this.error.set('');
+
+    this.http.delete(`${API}/${id}`, { params: { userId: USER_ID } }).subscribe({
+      next: () => this.afterDelete(id),
+      error: (err: HttpErrorResponse) => {
+        this.deletingId.set(null);
+        if (err.status === 0) {
+          // Server cannot be reached -> remove it from this device only
+          this.afterDelete(id);
+          this.writeLocal(this.addresses());
+        } else {
+          this.error.set(`The address could not be deleted (server error ${err.status}).`);
+        }
+      }
+    });
+  }
+
+  private afterDelete(id: number): void {
+    const remaining = this.addresses().filter((a) => a.addressId !== id);
+    this.addresses.set(remaining);
+
+    if (this.selectedId() === id) {
+      const next = remaining.find((a) => a.isDefault) ?? remaining[0];
+      this.selectedId.set(next?.addressId ?? null);
+    }
+    if (remaining.length === 0) this.showForm.set(true);
+    this.deletingId.set(null);
   }
 
   protected cancelForm(): void {
