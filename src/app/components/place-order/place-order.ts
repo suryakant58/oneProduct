@@ -5,7 +5,7 @@ import { AddressData } from '../address/address';
 import { PaymentData } from '../payment-summary/payment-summary';
 
 const API = 'https://localhost:7181/api/Order';
-const USER_ID = 1; // TODO: replace with the logged-in user's id
+const USER_ID = '11111111-1111-1111-1111-111111111111'; // TODO: replace with the logged-in user's id
 const FREE_DELIVERY_AT = 499;
 const DELIVERY_FEE = 49;
 const COD_FEE = 20;
@@ -91,7 +91,7 @@ export class PlaceOrder {
 
     const receipt = { total: this.total(), method: payment.paymentMethod, detail: payment.detail };
 
-    this.http.post<{ orderId: number }>(API, body).subscribe({
+ this.http.post<{ orderId: string }>(API, body).subscribe({
       next: (res) => this.success(String(res.orderId), receipt),
       error: (err: HttpErrorResponse) => {
         if (err.status === 0) {
@@ -99,13 +99,12 @@ export class PlaceOrder {
           this.offline.set(true);
           this.success('CR' + Date.now().toString().slice(-8), receipt);
         } else {
-          // Server answered with an error (400/404/500): the order was NOT saved
-          this.placing.set(false);
-          this.error.set(
-            `The order could not be saved (server error ${err.status}). ` +
-            `Please check the API output window and try again.`
-          );
-        }
+  this.placing.set(false);
+  const detail = err.error?.errors
+    ? JSON.stringify(err.error.errors)
+    : (typeof err.error === 'string' ? err.error : '');
+  this.error.set(`The order could not be saved (server error ${err.status}). ${detail}`);
+}
       }
     });
   }

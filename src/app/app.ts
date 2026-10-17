@@ -38,19 +38,21 @@ export class App implements OnInit, OnDestroy {
   });
 }
 
-  getImage(path: string): string {
-    if (!path) return '';
-    return path.startsWith('http') ? path : this.apiBase + path;
-  }
+getImage(path: string): string {
+  if (!path) return '';
+  return path.startsWith('http') ? path : this.apiBase + encodeURI(path);
+}
 
   // ---------- UI state ----------
+  
   protected readonly themes = ['Light', 'Tropical', 'Midnight', 'Corporate', 'Glossy'] as const;
   protected readonly activeTheme = signal<(typeof this.themes)[number]>('Tropical');
   protected readonly cartItems = signal<CartItem[]>([]);
+   protected readonly cartCount = computed(() => this.cartItems().reduce((n, i) => n + i.qty, 0));
   protected readonly selectedAddress = signal<AddressData | null>(null);
   protected readonly appliedCoupon = signal('');
   protected readonly isTrackingOpen = signal(false);
-  protected readonly trackOrderId = signal<number | null>(null);
+protected readonly trackOrderId = signal<string | null>(null);     
   protected readonly isMyOrdersOpen = signal(false);
 
   // product id -> name + image, so "My orders" can show product names and pictures
@@ -62,9 +64,14 @@ export class App implements OnInit, OnDestroy {
     return map;
   });
   protected readonly selectedPayment = signal<PaymentData | null>(null);
-  protected readonly cartCount = computed(() =>
-    this.cartItems().reduce((n, i) => n + i.qty, 0)
-  );
+   protected readonly outOfStockIds = computed(() =>
+     this.cartItems()
+       .filter(item => {
+         const p = this.data().find(x => String(x.id) === String(item.id));
+         return !p || Number(p.quantity ?? 0) < item.qty;
+       })
+       .map(item => item.id)
+   );
   protected readonly isCartOpen = signal(false);
   protected readonly checkoutStep = signal<'cart' | 'address' | 'payment-summary' | 'place-order'>('cart');
   protected readonly wishlistCount = signal(3);
@@ -101,7 +108,11 @@ export class App implements OnInit, OnDestroy {
     'https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?auto=format&fit=crop&w=1000&q=85',
     'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?auto=format&fit=crop&w=1000&q=85'
   ];
-  protected readonly quickViewImages = signal(this.quickViewImageUrls);
+  // protected readonly quickViewImages = signal(this.quickViewImageUrls);
+    protected readonly quickViewImages = computed(() =>
+    this.data().map((p) => this.getImage(p.image))
+  );
+  protected readonly quickViewProduct = computed(() => this.data()[this.quickViewIndex()]);
 
   protected readonly galleryImages = [
     'https://images.unsplash.com/photo-1545247181-516773cae754?auto=format&fit=crop&w=900&q=85',
@@ -154,7 +165,28 @@ export class App implements OnInit, OnDestroy {
   protected readonly currentPage = computed(() =>
     Math.min(this.productPage(), this.pageCount() - 1)
   );
+  // ---------- Pack rows: Single = 1, Combo = 10, Jumbo = 30 ----------
+  protected readonly packs = [
+    { type: 'Single', title: 'Single (1 piece)',   qty: 1 },
+    { type: 'Combo',  title: 'Combo (pack of 10)', qty: 10 },
+    { type: 'Jumbo',  title: 'Jumbo (pack of 30)', qty: 30 }
+  ];
 
+  protected readonly productRows = computed(() => {
+    const term = this.searchTerm().toLowerCase().trim();
+    const selected = this.selectedCategory();
+
+    const filtered = this.data().filter((p) =>
+      !term || `${p.name} ${p.category} ${p.location}`.toLowerCase().includes(term)
+    );
+
+    const rows = this.packs.map((pack) => ({ ...pack, items: filtered }));
+    return selected === 'All products' ? rows : rows.filter((r) => r.type === selected);
+  });
+
+  protected isPackUnavailable(product: ProductData, packQty: number): boolean {
+    return Number(product.quantity ?? 0) < packQty;
+  }
   // ---------- Theme ----------
   protected setTheme(theme: (typeof this.themes)[number]): void {
     this.activeTheme.set(theme);
@@ -165,7 +197,7 @@ export class App implements OnInit, OnDestroy {
   // ---------- Cart / checkout ----------
   // ---------- Festive sale popup ----------
   protected readonly promoCode = 'COCOFEST20';
-  protected readonly promoTotal = 8.5; // seconds before it closes by itself
+  protected readonly promoTotal = 20.5; // seconds before it closes by itself
   protected readonly isPromoOpen = signal(false);
   protected readonly promoSeconds = signal(8.5);
   protected readonly couponCopied = signal(false);
@@ -236,31 +268,26 @@ protected isOutOfStock(product: ProductData): boolean {
   return Number(product.quantity ?? 0) <= 0;
 }
 
-protected addToCart(product: ProductData): void {
-  if (this.isOutOfStock(product)) {
-    this.toast.set(`${product.name} is out of stock.`);
-    window.setTimeout(() => this.toast.set(''), 2500);
-    return;
-  }
+protected addToCart(product: ProductData, packQty = 1): void {
+  const stock = Number(product.quantity ?? 0);
+  const inCart = this.cartItems().find((i) => i.id === product.id)?.qty ?? 0;
+
+  // if (stock <= 0) {
+  //   this.toast.set(`${product.name} is out of stock.`);
+  //   window.setTimeout(() => this.toast.set(''), 2500);
+  //   return;
+  // }
+  // if (inCart + packQty > stock) {
+  //   this.toast.set(`Only ${stock} available in stock.`);
+  //   window.setTimeout(() => this.toast.set(''), 2500);
+  //   return;
+  // }
 
   this.cartItems.update((list) => {
     const existing = list.find((i) => i.id === product.id);
-
-    // Don't allow more items than the available stock.
-    const availableStock = Number(product.quantity);
-
     if (existing) {
-      if (existing.qty >= availableStock) {
-        this.toast.set(`Only ${availableStock} available in stock.`);
-        window.setTimeout(() => this.toast.set(''), 2500);
-        return list;
-      }
-
-      return list.map((i) =>
-        i.id === product.id ? { ...i, qty: i.qty + 1 } : i
-      );
+      return list.map((i) => (i.id === product.id ? { ...i, qty: i.qty + packQty } : i));
     }
-
     return [
       ...list,
       {
@@ -270,14 +297,12 @@ protected addToCart(product: ProductData): void {
         image: this.getImage(product.image),
         category: product.category,
         location: product.location,
-        qty: 1
+        qty: packQty
       }
     ];
   });
 
-  if (!this.isOutOfStock(product)) {
-    this.openCart();
-  }
+  this.openCart();
 }
 
   protected increaseItem(id: CartItem['id']): void {
@@ -291,33 +316,36 @@ protected addToCart(product: ProductData): void {
   protected removeItem(id: CartItem['id']): void {
     this.cartItems.update((list) => list.filter((i) => i.id !== id));
   }
-  protected openTracking(event?: Event): void {
-    event?.preventDefault();
-    this.trackOrderId.set(null);
-    this.isAssistantOpen.set(false);
-    this.isTrackingOpen.set(true);
-    window.scrollTo({ top: 0 });
-  }
-  protected closeTracking(): void { this.isTrackingOpen.set(false); }
-  protected openMyOrders(): void {
-    this.isProfileOpen.set(false);
-    this.isTrackingOpen.set(false);
-    this.isMyOrdersOpen.set(true);
-    window.scrollTo({ top: 0 });
-  }
-  protected closeMyOrders(): void { this.isMyOrdersOpen.set(false); }
-  protected trackFromMyOrders(orderId: number): void {
-    this.isMyOrdersOpen.set(false);
-    this.trackOrderId.set(orderId);
-    this.isTrackingOpen.set(true);
-    window.scrollTo({ top: 0 });
-  }
-  protected trackOrder(orderNumber: string): void {
-    this.finishOrder();                       // clear the cart and leave checkout
-    this.trackOrderId.set(Number(orderNumber) || null);
-    this.isTrackingOpen.set(true);
-    window.scrollTo({ top: 0 });
-  }
+protected openTracking(event?: Event): void {
+  event?.preventDefault();
+  this.trackOrderId.set(null);
+  this.isAssistantOpen.set(false);
+  this.isTrackingOpen.set(true);
+  window.scrollTo({ top: 0 });
+}
+protected closeTracking(): void { this.isTrackingOpen.set(false); }
+
+protected openMyOrders(): void {
+  this.isProfileOpen.set(false);
+  this.isTrackingOpen.set(false);
+  this.isMyOrdersOpen.set(true);
+  window.scrollTo({ top: 0 });
+}
+protected closeMyOrders(): void { this.isMyOrdersOpen.set(false); }
+
+protected trackFromMyOrders(orderId: string): void {
+  this.isMyOrdersOpen.set(false);
+  this.trackOrderId.set(orderId);
+  this.isTrackingOpen.set(true);
+  window.scrollTo({ top: 0 });
+}
+
+protected trackOrder(orderNumber: string): void {
+  this.finishOrder();
+  this.trackOrderId.set(orderNumber || null);
+  this.isTrackingOpen.set(true);
+  window.scrollTo({ top: 0 });
+}
   protected finishOrder(): void {
     this.cartItems.set([]);
     this.appliedCoupon.set('');
@@ -334,6 +362,20 @@ protected addToCart(product: ProductData): void {
     this.isCartOpen.set(true);
     window.scrollTo({ top: 0 });
   }
+
+protected notifyStock(req: { id: CartItem['id']; email: string }): void {
+  this.productService.notifyMe(req.id, req.email).subscribe({
+    next: () => {
+      this.toast.set('We will notify you when it is back in stock.');
+      window.setTimeout(() => this.toast.set(''), 3000);
+    },
+    error: () => {
+      this.toast.set('Could not save your request. Try again.');
+      window.setTimeout(() => this.toast.set(''), 3000);
+    }
+  });
+}
+
   protected closeCart(): void { this.isCartOpen.set(false); }
   protected openAddress(): void { this.checkoutStep.set('address'); }
   protected openPaymentSummary(): void { this.checkoutStep.set('payment-summary'); }
@@ -386,8 +428,13 @@ protected addToCart(product: ProductData): void {
   }
 
   // ---------- Quick view ----------
-  protected openQuickView(): void {
-    this.quickViewIndex.set(0);
+  // protected openQuickView(): void {
+  //   this.quickViewIndex.set(0);
+  //   this.isQuickViewOpen.set(true);
+  // }
+    protected openQuickView(product: ProductData): void {
+    const index = this.data().findIndex((p) => p.id === product.id);
+    this.quickViewIndex.set(Math.max(0, index));
     this.isQuickViewOpen.set(true);
   }
   protected closeQuickView(): void { this.isQuickViewOpen.set(false); }

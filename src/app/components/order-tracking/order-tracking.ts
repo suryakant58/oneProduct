@@ -2,7 +2,7 @@ import { Component, OnInit, computed, inject, input, output, signal } from '@ang
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
 const API = 'https://localhost:7181/api/Order';
-const USER_ID = 1; // TODO: replace with the logged-in user's id
+const USER_ID = '11111111-1111-1111-1111-111111111111'; // TODO: replace with the logged-in user's id
 
 // The steps, in order. The text must match the status names used by the API.
 export const ORDER_STEPS = [
@@ -19,7 +19,7 @@ export const ORDER_STEPS = [
 ];
 
 interface OrderSummary {
-  orderId: number;
+  orderId: string;
   orderDate: string;
   totalAmount: number;
   orderStatus: string;
@@ -45,12 +45,13 @@ export class OrderTracking implements OnInit {
   private readonly http = inject(HttpClient);
 
   /** Open this order first (e.g. the one that was just placed) */
-  readonly orderId = input<number | null>(null);
+
+readonly orderId = input<string | null>(null);    
   readonly back = output<void>();
 
   protected readonly steps = ORDER_STEPS;
   protected readonly orders = signal<OrderSummary[]>([]);
-  protected readonly selectedId = signal<number | null>(null);
+ protected readonly selectedId = signal<string | null>(null); 
   protected readonly tracking = signal<Tracking | null>(null);
   protected readonly loading = signal(true);
   protected readonly error = signal('');
@@ -88,7 +89,7 @@ export class OrderTracking implements OnInit {
     });
   }
 
-  protected select(id: number): void {
+protected select(id: string): void {
     this.selectedId.set(id);
     this.loading.set(true);
     this.error.set('');
@@ -102,8 +103,8 @@ export class OrderTracking implements OnInit {
     });
   }
 
-  protected onPick(event: Event): void {
-    this.select(Number((event.target as HTMLSelectElement).value));
+ protected onPick(event: Event): void {
+  this.select((event.target as HTMLSelectElement).value);
   }
 
   protected refresh(): void {

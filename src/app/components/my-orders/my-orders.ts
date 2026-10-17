@@ -2,7 +2,7 @@ import { Component, OnInit, computed, inject, input, output, signal } from '@ang
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
 const API = 'https://localhost:7181/api/MyOrders';
-const USER_ID = 1; // TODO: replace with the logged-in user's id
+const USER_ID = '11111111-1111-1111-1111-111111111111' // TODO: replace with the logged-in user's id
 
 export interface ProductInfo {
   name: string;
@@ -15,9 +15,8 @@ interface OrderLine {
   unitPrice: number;
   totalPrice: number;
 }
-
 interface OrderFull {
-  orderId: number;
+  orderId: string;  
   orderDate: string;
   orderStatus: string;
   subTotal: number;
@@ -50,12 +49,11 @@ export class MyOrders implements OnInit {
   readonly products = input<Record<string, ProductInfo>>({});
 
   readonly back = output<void>();
-  readonly track = output<number>();
-
+ readonly track = output<string>();    
   protected readonly orders = signal<OrderFull[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal('');
-  protected readonly openId = signal<number | null>(null);
+protected readonly openId = signal<string | null>(null);  
 
   protected readonly orderCount = computed(() => this.orders().length);
 
@@ -77,8 +75,8 @@ export class MyOrders implements OnInit {
     });
   }
 
-  protected toggle(id: number): void {
-    this.openId.set(this.openId() === id ? null : id);
+protected toggle(id: string): void {  
+ this.openId.set(this.openId() === id ? null : id);
   }
 
   protected nameOf(productId: string): string {

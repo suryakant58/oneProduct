@@ -11,18 +11,22 @@ export interface ProductData {
   image: string;
   rating: number;
   quantity: number;
+  
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductService {
-
   private apiUrl = 'https://localhost:7181/api/Product';
 
   constructor(private http: HttpClient) {}
 
   getProducts(): Observable<ProductData[]> {
     return this.http.get<ProductData[]>(this.apiUrl);
+  }
+
+  notifyMe(productId: string | number, email: string): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}/${productId}/notify`, { email });
   }
 }

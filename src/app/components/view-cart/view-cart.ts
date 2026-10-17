@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, effect, input, output, signal } from '@angular/core';
 
 export interface CartItem {
   id: number | string;
@@ -23,6 +23,7 @@ const COUPONS: Record<string, number> = { FRESH15: 15, COCOFEST20: 20 }; // code
 export class ViewCart {
   // ---------- Inputs / outputs (App owns the cart data) ----------
   readonly items = input<CartItem[]>([]);
+  readonly outOfStockIds = input<CartItem['id'][]>([]);
 
   readonly previous = output<void>();
   readonly next = output<void>();
@@ -30,6 +31,7 @@ export class ViewCart {
   readonly qtyDown = output<CartItem['id']>();
   readonly removeItem = output<CartItem['id']>();
   readonly clearCart = output<void>();
+  readonly notifyMe = output<{ id: CartItem['id']; email: string }>();
 
   // ---------- Local UI state ----------
   protected readonly steps = ['Cart', 'Address', 'Payment', 'Place order'];
@@ -39,6 +41,57 @@ export class ViewCart {
   protected readonly appliedCoupon = computed(() => this.coupon());
   protected readonly couponMessage = signal('');
   protected readonly couponValid = signal(false);
+
+  // ---------- Stock ----------
+  protected isOut(id: CartItem['id']): boolean {
+    return this.outOfStockIds().includes(id);
+  }
+  protected readonly hasOutOfStock = computed(() => this.outOfStockIds().length > 0);
+
+  protected readonly popupId = signal<CartItem['id'] | null>(null);
+  protected readonly popupItem = computed(
+    () => this.items().find((i) => i.id === this.popupId()) ?? null
+  );
+  protected readonly notifyEmail = signal('');
+  protected readonly notifyError = signal('');
+  protected readonly notifySent = signal(false);
+  private popupShown = false;
+
+  constructor() {
+    // open the popup once when the cart opens with an out-of-stock item
+    effect(() => {
+      const ids = this.outOfStockIds();
+      if (ids.length && !this.popupShown) {
+        this.popupShown = true;
+        this.popupId.set(ids[0]);
+      }
+    });
+  }
+
+  protected openNotify(id: CartItem['id']): void {
+    this.notifySent.set(false);
+    this.notifyError.set('');
+    this.popupId.set(id);
+  }
+  protected closePopup(): void {
+    this.popupId.set(null);
+    this.notifySent.set(false);
+  }
+  protected removeFromPopup(): void {
+    const id = this.popupId();
+    if (id !== null) this.removeItem.emit(id);
+    this.closePopup();
+  }
+  protected submitNotify(): void {
+    const email = this.notifyEmail().trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      this.notifyError.set('Enter a valid email address.');
+      return;
+    }
+    this.notifyError.set('');
+    this.notifyMe.emit({ id: this.popupId()!, email });
+    this.notifySent.set(true);
+  }
 
   // ---------- Totals ----------
   protected readonly count = computed(() => this.items().reduce((n, i) => n + i.qty, 0));

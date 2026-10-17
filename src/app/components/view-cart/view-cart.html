@@ -17,17 +17,26 @@
 
   @if (items().length) {
     <section class="cart-layout">
-      <!-- Items -->
       <div class="cart-list">
         @for (item of items(); track item.id) {
           <article class="cart-item">
-            <img class="cart-thumb" [src]="item.image" [alt]="item.name" />
+            <div class="cart-img-wrap">
+              <img class="cart-thumb" [class.grayscale]="isOut(item.id)" [src]="item.image" [alt]="item.name" />
+              @if (isOut(item.id)) {
+                <div class="oos-band">Not enough stock</div>
+              }
+            </div>
 
             <div class="cart-info">
               <span class="cart-tag">{{ item.category }}</span>
               <h3>{{ item.name }}</h3>
               <p class="cart-meta">📍 {{ item.location }}</p>
               <p class="cart-unit">{{ money(item.price) }} each</p>
+              @if (isOut(item.id)) {
+                <button type="button" class="notify-link" (click)="openNotify(item.id)">
+                  Notify me when available
+                </button>
+              }
             </div>
 
             <div class="cart-controls">
@@ -47,7 +56,6 @@
         }
       </div>
 
-      <!-- Summary -->
       <aside class="cart-summary">
         <h2>Order summary</h2>
 
@@ -86,6 +94,10 @@
           <div class="grand"><dt>Total</dt><dd>{{ money(total()) }}</dd></div>
         </dl>
 
+        @if (hasOutOfStock()) {
+          <p class="stock-warning">Remove out-of-stock items to continue.</p>
+        }
+
         <button type="button" class="clear-cart" (click)="clearCart.emit()">Clear cart</button>
       </aside>
     </section>
@@ -100,8 +112,35 @@
 
   <footer class="checkout-actions">
     <button class="checkout-previous" type="button" (click)="previous.emit()">Continue shopping</button>
-    <button class="checkout-next" type="button" (click)="next.emit()" [disabled]="!items().length">
+    <button class="checkout-next" type="button" (click)="next.emit()"
+      [disabled]="!items().length || hasOutOfStock()">
       Proceed to address
     </button>
   </footer>
+
+  @if (popupItem(); as p) {
+    <div class="stock-backdrop" (click)="closePopup()">
+      <section class="stock-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <button type="button" class="stock-close" (click)="closePopup()" aria-label="Close">×</button>
+
+        @if (!notifySent()) {
+          <h2>{{ p.name }} is out of stock</h2>
+          <p>Sorry, this product is not available right now. Enter your email and we will notify you when it is back in stock.</p>
+          <input type="email" placeholder="you@example.com" [value]="notifyEmail()"
+            (input)="notifyEmail.set($any($event.target).value)" (keyup.enter)="submitNotify()" />
+          @if (notifyError()) { <small class="bad">{{ notifyError() }}</small> }
+          <div class="stock-actions">
+            <button type="button" class="stock-primary" (click)="submitNotify()">Notify me</button>
+            <button type="button" class="stock-secondary" (click)="removeFromPopup()">Remove from cart</button>
+          </div>
+        } @else {
+          <h2>You're on the list ✓</h2>
+          <p>We will email <strong>{{ notifyEmail() }}</strong> when {{ p.name }} is available again.</p>
+          <div class="stock-actions">
+            <button type="button" class="stock-primary" (click)="closePopup()">OK</button>
+          </div>
+        }
+      </section>
+    </div>
+  }
 </main>

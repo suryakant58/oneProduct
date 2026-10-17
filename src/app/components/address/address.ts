@@ -5,8 +5,8 @@ import { CartItem } from '../view-cart/view-cart';
 
 // Matches your SQL "Address" table
 export interface AddressData {
-  addressId?: number;
-  userId: number;
+  addressId?: string;
+  userId: string;
   fullName: string;
   phoneNumber: string;
   addressLine1: string;
@@ -20,7 +20,7 @@ export interface AddressData {
 }
 
 const API = 'https://localhost:7181/api/Address';
-const USER_ID = 1; // TODO: replace with the logged-in user's id
+const USER_ID ='11111111-1111-1111-1111-111111111111'; // TODO: replace with the logged-in user's id
 const LOCAL_KEY = 'oneProduct-addresses';
 const FREE_DELIVERY_AT = 499;
 const DELIVERY_FEE = 49;
@@ -53,12 +53,12 @@ export class Address implements OnInit {
   ];
 
   protected readonly addresses = signal<AddressData[]>([]);
-  protected readonly selectedId = signal<number | null>(null);
+protected readonly selectedId = signal<string | null>(null);
   protected readonly showForm = signal(false);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly error = signal('');
-  protected readonly deletingId = signal<number | null>(null);
+protected readonly deletingId = signal<string | null>(null);
   /** true when the API is not reachable and addresses are kept on this device only */
   protected readonly offline = signal(false);
 
@@ -130,7 +130,7 @@ export class Address implements OnInit {
         if (err.status === 0) {
           // Server cannot be reached -> keep the address on this device
           this.offline.set(true);
-          this.afterSave({ ...body, addressId: Date.now() });
+         this.afterSave({ ...body, addressId: crypto.randomUUID() });
           this.writeLocal(this.addresses());
         } else {
           this.saving.set(false);
@@ -166,7 +166,7 @@ export class Address implements OnInit {
     });
   }
 
-  private afterDelete(id: number): void {
+private afterDelete(id: string): void { 
     const remaining = this.addresses().filter((a) => a.addressId !== id);
     this.addresses.set(remaining);
 
@@ -175,7 +175,7 @@ export class Address implements OnInit {
       this.selectedId.set(next?.addressId ?? null);
     }
     if (remaining.length === 0) this.showForm.set(true);
-    this.deletingId.set(null);
+    this.deletingId.set(null);  
   }
 
   protected cancelForm(): void {

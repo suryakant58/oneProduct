@@ -1,9 +1,19 @@
 @if (isCartOpen()) {
   @switch (checkoutStep()) {
-    @case ('cart') {
-      <app-view-cart [items]="cartItems()" [coupon]="appliedCoupon()" (couponChange)="appliedCoupon.set($event)" (qtyUp)="increaseItem($event)" (qtyDown)="decreaseItem($event)"
-        (removeItem)="removeItem($event)" (clearCart)="clearCart()" (previous)="closeCart()" (next)="openAddress()" />
-    }
+  @case ('cart') {
+  <app-view-cart
+    [items]="cartItems()"
+    [outOfStockIds]="outOfStockIds()"
+    [coupon]="appliedCoupon()"
+    (couponChange)="appliedCoupon.set($event)"
+    (qtyUp)="increaseItem($event)"
+    (qtyDown)="decreaseItem($event)"
+    (removeItem)="removeItem($event)"
+    (clearCart)="clearCart()"
+    (notifyMe)="notifyStock($event)"
+    (previous)="closeCart()"
+    (next)="openAddress()" />
+}
     @case ('address') {
       <app-address [items]="cartItems()" (previous)="showCartStep()" (addressSelected)="selectedAddress.set($event)"
         (next)="openPaymentSummary()" />
@@ -23,22 +33,35 @@
 } @else if (isTrackingOpen()) {
   <app-order-tracking [orderId]="trackOrderId()" (back)="closeTracking()" />
 } @else {
-@if (isQuickViewOpen()) {<div class="quick-view-backdrop" (click)="closeQuickView()">
-  <section class="quick-view-modal" role="dialog" aria-modal="true" aria-label="Quick product view"
-    (click)="$event.stopPropagation()"><button class="quick-view-close" (click)="closeQuickView()"
-      aria-label="Close quick view">×</button>
-    <p class="eyebrow"><span></span> Quick view</p>
-    <h2>Fresh from the <em>coconut.</em></h2>
-    <div class="quick-view-stage"><img [src]="quickViewImages()[quickViewIndex()]"
-        [alt]="'Coconut juice quick view ' + (quickViewIndex() + 1)"><button class="quick-view-prev"
-        (click)="moveQuickView(-1)" aria-label="Previous quick view image">&lt;</button><button class="quick-view-next"
-        (click)="moveQuickView(1)" aria-label="Next quick view image">&gt;</button></div>
-    <div class="quick-view-thumbs">@for (image of quickViewImages(); track $index) {<button
-        [class.active]="quickViewIndex() === $index" (click)="quickViewIndex.set($index)"
-        [attr.aria-label]="'Show quick view image ' + ($index + 1)"><img [src]="image" alt=""></button>}</div>
-    <p class="quick-view-count">{{quickViewIndex() + 1}} / {{quickViewImages().length}} coconut juice images</p>
-  </section>
-</div>}
+@if (isQuickViewOpen()) {
+  @if (quickViewProduct(); as product) {
+    <div class="quick-view-backdrop" (click)="closeQuickView()">
+      <section class="quick-view-modal" role="dialog" aria-modal="true" aria-label="Quick product view"
+        (click)="$event.stopPropagation()">
+        <button class="quick-view-close" (click)="closeQuickView()" aria-label="Close quick view">×</button>
+        <p class="eyebrow"><span></span> Quick view</p>
+        <h2>{{ product.name }}</h2>
+        <p class="quick-view-info">
+          ₹{{ product.price }} · {{ product.location }} · ⭐ {{ product.rating }}
+        </p>
+        <div class="quick-view-stage">
+          <img [src]="quickViewImages()[quickViewIndex()]" [alt]="product.name">
+          <button class="quick-view-prev" (click)="moveQuickView(-1)" aria-label="Previous product image">&lt;</button>
+          <button class="quick-view-next" (click)="moveQuickView(1)" aria-label="Next product image">&gt;</button>
+        </div>
+        <div class="quick-view-thumbs">
+          @for (image of quickViewImages(); track $index) {
+            <button [class.active]="quickViewIndex() === $index" (click)="quickViewIndex.set($index)"
+              [attr.aria-label]="'Show product image ' + ($index + 1)">
+              <img [src]="image" alt="">
+            </button>
+          }
+        </div>
+        <p class="quick-view-count">{{ quickViewIndex() + 1 }} / {{ quickViewImages().length }} products</p>
+      </section>
+    </div>
+  }
+}
 @if (isPromoOpen()) {
 <div class="promo-backdrop" (click)="closePromo()">
   <section class="promo-modal" role="dialog" aria-modal="true" aria-label="Festive sale offer"
@@ -53,8 +76,8 @@
       Coupon code: <strong>{{ promoCode }}</strong>
       <small>{{ couponCopied() ? '✓ Copied' : 'Tap to copy' }}</small>
     </button>
-
-    <p class="promo-timer">Autoclose in {{ promoSeconds().toFixed(1) }} seconds</p>
+<!-- 
+    <p class="promo-timer">Autoclose in {{ promoSeconds().toFixed(1) }} seconds</p> -->
 
     <button type="button" class="promo-btn" (click)="shopNow()">Shop now</button>
 
@@ -450,12 +473,16 @@
     }
 
     /* Remove the old arrow icons drawn by ::before / ::after on the grid */
-    #shop::before,
+      #shop::before,
     #shop::after,
     .product-pager::before,
     .product-pager::after,
     .product-pager *::before,
-    .product-pager *::after {
+    .product-pager *::after,
+    .product-row::before,
+    .product-row::after,
+    .product-row *::before,
+    .product-row *::after {
       content: none !important;
       display: none !important;
     }
@@ -500,6 +527,65 @@
       font: 12px var(--sans);
     }
 
+    .product-row { margin: 34px 0 10px; }
+
+    .row-title {
+      margin: 0 0 14px;
+      color: var(--forest);
+      font: 700 26px var(--display);
+    }
+
+     .row-pager {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .row-btn {
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--forest);
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      position: static;
+      transform: none;
+    }
+    .row-btn:hover { background: var(--coral); color: #fff; }
+
+    /* hide anything in the row that is not the 2 buttons or the cards */
+    .row-pager > *:not(.row-btn):not(.row-scroll) { display: none !important; }
+    .row-scroll > *:not(.product-card):not(.empty-state) { display: none !important; }
+    .row-pager::before, .row-pager::after,
+    .row-scroll::before, .row-scroll::after {
+      content: none !important;
+      display: none !important;
+    }
+
+    .row-scroll {
+      flex: 1;
+      min-width: 0;
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: calc((100% - 54px) / 4);
+      gap: 18px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .row-scroll::-webkit-scrollbar { display: none; }
+    .row-scroll > .product-card { scroll-snap-align: start; }
+    .product-row .product-image { position: relative; }
+    .product-row .product-image img {
+      width: 100% !important;
+      height: 220px !important;
+      object-fit: cover;
+      display: block;
+    }
     @media (max-width: 680px) {
       .profile-popover {
         right: 10px;
@@ -539,17 +625,16 @@
           <div class="theme-options">@for (theme of themes; track theme) {<button
               [class.active]="activeTheme() === theme" (click)="setTheme(theme)">{{theme}}</button>}</div>
         </div><button class="icon-button desktop-only" aria-label="Notifications">♧<i>2</i></button><button
-          class="icon-button" aria-label="Wishlist">♡<i>{{wishlistCount()}}</i></button><button class="icon-button"
-          aria-label="Shopping bag" (click)="openCart()">♧<i>{{cartCount()}}</i></button><button
-          class="profile-button"><span>AM</span><b>⌄</b></button>
+          class="icon-button" aria-label="Wishlist">♡<i>{{wishlistCount()}}</i></button>
+          <button class="icon-button" aria-label="Shopping bag" (click)="openCart()">♧<i>{{cartCount()}}</i></button>
+          <button                                                                                                            class="profile-button"><span>AM</span><b>⌄</b></button>
       </div>
     </div>
     <div class="mega-strip">
-      <div class="container-xl mega-inner"><span>Good stuff inside</span><button
-          (click)="chooseCategory('All products')">All products <b>→</b></button><button
-          (click)="chooseCategory('Single bottles')">Single bottles</button><button
-          (click)="chooseCategory('Case packs')">Case packs</button><button (click)="chooseCategory('Bulk orders')">Bulk
-          orders</button><small>♧ Delivering across India</small></div>
+      <div class="container-xl mega-inner"><span>Good stuff inside</span><button (click)="chooseCategory('All products')">All products <b>→</b></button><button
+          (click)="chooseCategory('Single')">Single</button><button
+          (click)="chooseCategory('Combo')">Combo</button><button
+          (click)="chooseCategory('Jumbo')">Jumbo</button><small>♧ Delivering across India</small></div>
     </div>
   </header>
   <main id="top">
@@ -590,49 +675,66 @@
         </div>
         <div class="section-controls"><span>{{selectedCategory()}}</span><button class="round-arrow">→</button></div>
       </div>
-      <div class="category-pills">@for (category of ['All products','Single bottles','Case packs','Bulk orders']; track
+      <div class="category-pills">@for (category of ['All products','Single','Combo','Jumbo']; track
         category) {<button [class.active]="selectedCategory() === category"
           (click)="chooseCategory(category)">{{category}}</button>}</div>
+@for (row of productRows(); track row.type) {
+  <div class="product-row">
+    <h3 class="row-title">{{ row.title }}</h3>
 
-      <div class="product-pager">
-        <button class="pager-btn" type="button" (click)="moveProductPage(-1)"
-          [disabled]="currentPage() === 0" aria-label="Previous products">&lt;</button>
+    <div class="row-pager">
+      <!-- <button class="pager-btn" type="button" aria-label="Previous products"
+        (click)="scroller.scrollBy({ left: -scroller.clientWidth, behavior: 'smooth' })">&lt;</button> -->
+        <button class="row-btn" type="button" aria-label="Previous products"
+  (click)="scroller.scrollBy({ left: -(scroller.clientWidth + 18), behavior: 'smooth' })">&lt;</button>
 
-        <div class="product-grid">
-          @for (product of visibleProducts(); track product.id) {
-            <article class="product-card" [class.out-of-stock]="isOutOfStock(product)">
-              <div class="product-image">
-                <span class="product-tag">{{ product.category }}</span>
-                <button class="heart" type="button">♡</button>
-                <img [src]="getImage(product.image)" [alt]="product.name" loading="lazy">
-                @if (isOutOfStock(product)) {
-                  <div class="oos-band">Out of stock</div>
-                }
-                <div class="quick-view" (click)="openQuickView()">Quick view <span>↗</span></div>
-              </div>
-              <div class="product-info">
-                <h3>{{ product.name }}</h3>
-                <p>₹{{ product.price }}</p>
-                <p>📍 {{ product.location }}</p>
-                <p>⭐ {{ product.rating }}</p>
-                @if (isOutOfStock(product)) {
-                  <p class="oos-text">Currently unavailable</p>
-                  <button class="button oos-btn" type="button" disabled>Out of stock</button>
-                } @else {
-                  <button class="button button-dark" type="button" (click)="addToCart(product)">Add to cart</button>
-                }
-              </div>
-            </article>
-          } @empty {
-            <div class="empty-state">No products found.</div>
-          }
-        </div>
-
-        <button class="pager-btn" type="button" (click)="moveProductPage(1)"
-          [disabled]="currentPage() >= pageCount() - 1" aria-label="Next products">&gt;</button>
+      <div class="row-scroll" #scroller>
+        @for (product of row.items; track product.id) {
+          <!-- <article class="product-card" [class.out-of-stock]="isPackUnavailable(product, row.qty)"  > -->
+            <article class="product-card">
+            <div class="product-image">
+              <span class="product-tag">{{ product.category }}</span>
+              <button class="heart" type="button">♡</button>
+              <img [src]="getImage(product.image)" [alt]="product.name" />
+              <!-- @if (isPackUnavailable(product, row.qty)) {
+                <div class="oos-band">Not enough stock</div>
+              } -->
+             <div class="quick-view" (click)="openQuickView(product)">Quick view <span>↗</span></div>
+            </div>
+            <div class="product-info">
+              <h3>{{ product.name }}</h3>
+              <p><strong>₹{{ product.price * row.qty }}</strong>
+                @if (row.qty > 1) { <small>(₹{{ product.price }} × {{ row.qty }})</small> }
+              </p>
+              <p>📍 {{ product.location }}</p>
+              <p>⭐ {{ product.rating }}</p>
+              <!-- @if (isPackUnavailable(product, row.qty)) {
+                <p class="oos-text">Currently unavailable</p>
+                <button class="button oos-btn" type="button" disabled>Out of stock</button>
+              } @else {
+                <button class="button button-dark" type="button" (click)="addToCart(product, row.qty)">
+                  Add {{ row.qty }} to cart
+                </button>
+              } -->
+                <button class="button button-dark" type="button" (click)="addToCart(product, row.qty)">
+  Add {{ row.qty }} to cart
+</button>
+            </div>
+          </article>
+        } @empty {
+          <div class="empty-state">No products found.</div>
+        }
       </div>
 
-      <p class="page-indicator">Page {{ currentPage() + 1 }} / {{ pageCount() }}</p>
+      <!-- <button class="pager-btn" type="button" aria-label="Next products"
+        (click)="scroller.scrollBy({ left: scroller.clientWidth, behavior: 'smooth' })">&gt;</button> -->
+        <button class="row-btn" type="button" aria-label="Next products"
+  (click)="scroller.scrollBy({ left: scroller.clientWidth + 18, behavior: 'smooth' })">&gt;</button>
+    </div>
+  </div>
+}
+
+      <!-- <p class="page-indicator">Page {{ currentPage() + 1 }} / {{ pageCount() }}</p> -->
 
       <div class="center-link"><a href="#shop" class="text-link">View all products <span>→</span></a></div>
     </section>
